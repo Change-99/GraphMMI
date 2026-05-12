@@ -1,0 +1,51 @@
+{
+  "config": {
+    "species": "human",
+    "data_root": "/mnt/d/Projects/GProject/gnn/data/processed/graphsage",
+    "run_root": "/mnt/d/Projects/GProject/gnn/exp/runs/xgboost_edge",
+    "drop_missing_leak_cols": false,
+    "missing_gap_threshold": 0.01,
+    "n_estimators": 800,
+    "max_depth": 4,
+    "learning_rate": 0.03,
+    "subsample": 0.9,
+    "colsample_bytree": 0.9,
+    "reg_lambda": 1.0,
+    "reg_alpha": 0.0,
+    "seed": 42,
+    "threshold": 0.5,
+    "n_jobs": 4
+  },
+  "data_path": "/mnt/d/Projects/GProject/gnn/data/processed/graphsage/human/graphsage_inputs.npz",
+  "raw_path": "/mnt/d/Projects/GProject/gnn/data/processed/graphsage/human/edge_features_raw.csv",
+  "num_features_used": 631,
+  "num_features_dropped": 0,
+  "dropped_features": [],
+  "train": {
+    "auc": 1.0,
+    "ap": 1.0,
+    "accuracy": 1.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "mcc": 1.0
+  },
+  "val": {
+    "auc": 1.0,
+    "ap": 1.0,
+    "accuracy": 0.9993131868131868,
+    "precision": 1.0,
+    "recall": 0.9986263736263736,
+    "f1": 0.9993127147766323,
+    "mcc": 0.998627315756501
+  },
+  "test": {
+    "auc": 0.9999936601859679,
+    "ap": 0.9999937135693482,
+    "accuracy": 0.9989010989010989,
+    "precision": 1.0,
+    "recall": 0.9978021978021978,
+    "f1": 0.9988998899889989,
+    "mcc": 0.9978046076701186
+  }
+}

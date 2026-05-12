@@ -1,0 +1,22 @@
+{
+  "species": "human",
+  "data_root": "/mnt/d/Projects/GProject/gnn/data/processed/graphsage",
+  "run_root": "/mnt/d/Projects/GProject/gnn/runs/graphsage",
+  "hidden_dim": 128,
+  "num_layers": 2,
+  "dropout": 0.3,
+  "decoder_hidden_dim": 256,
+  "epochs": 200,
+  "patience": 30,
+  "lr": 0.001,
+  "weight_decay": 0.0001,
+  "seed": 42,
+  "device": "cpu",
+  "directed_message_passing": false,
+  "use_pos_weight": false,
+  "threshold": 0.5,
+  "data_path": "/mnt/d/Projects/GProject/gnn/data/processed/graphsage/human/graphsage_inputs.npz",
+  "node_feature_dim": 22,
+  "edge_attr_dim": 631,
+  "message_passing_graph": "undirected_train_pos"
+}

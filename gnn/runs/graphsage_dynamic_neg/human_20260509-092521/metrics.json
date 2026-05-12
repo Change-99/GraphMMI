@@ -1,0 +1,23 @@
+{
+  "best_epoch": 27,
+  "best_val_auc": 0.5580110116863931,
+  "val": {
+    "loss": 3.794804334640503,
+    "auc": 0.5580110116863931,
+    "ap": 0.5365722737627044,
+    "accuracy": 0.5049088359046283,
+    "precision": 0.5024734982332155,
+    "recall": 0.9971949509116409,
+    "f1": 0.6682330827067668
+  },
+  "test": {
+    "loss": 3.932982921600342,
+    "auc": 0.5335500534714901,
+    "ap": 0.5218909948864291,
+    "accuracy": 0.5070145903479237,
+    "precision": 0.503544088460448,
+    "recall": 0.9966329966329966,
+    "f1": 0.6690525522697306
+  },
+  "interpretation": "Positive edges build the graph and provide positive supervision; negative labels are sampled dynamically from known non-edges."
+}

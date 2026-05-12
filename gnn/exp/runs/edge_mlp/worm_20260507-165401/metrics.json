@@ -1,0 +1,32 @@
+{
+  "best_epoch": 13,
+  "best_val_auc": 0.9999665875906312,
+  "train": {
+    "loss": 0.00489805219694972,
+    "auc": 1.0,
+    "ap": 1.0,
+    "accuracy": 1.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+  },
+  "val": {
+    "loss": 0.012993037700653076,
+    "auc": 0.9999665875906312,
+    "ap": 0.9999667796159722,
+    "accuracy": 0.9942196531791907,
+    "precision": 0.9942196531791907,
+    "recall": 0.9942196531791907,
+    "f1": 0.9942196531791907
+  },
+  "test": {
+    "loss": 0.023928295820951462,
+    "auc": 0.9996495996941961,
+    "ap": 0.9996694795388728,
+    "accuracy": 0.9907834101382489,
+    "precision": 0.9885321100917431,
+    "recall": 0.9930875576036866,
+    "f1": 0.9908045977011494
+  },
+  "interpretation": "If test AUC > 0.99, edge features or negative sampling are likely strong enough without GraphSAGE."
+}

@@ -1,0 +1,23 @@
+# Ignore nested git repository
+GraphMMI/
+
+# Ignore all data folders
+data/
+**/data/
+
+# Model files
+*.pt
+*.pth
+*.ckpt
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# VSCode
+.vscode/

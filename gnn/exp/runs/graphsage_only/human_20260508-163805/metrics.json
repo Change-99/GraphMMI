@@ -1,0 +1,32 @@
+{
+  "best_epoch": 25,
+  "best_val_auc": 0.5152639487167416,
+  "train": {
+    "loss": 3.5637717247009277,
+    "auc": 0.6304485064653805,
+    "ap": 0.5923402519341447,
+    "accuracy": 0.5605895196506551,
+    "precision": 0.5322486926205694,
+    "recall": 1.0,
+    "f1": 0.6947288585513841
+  },
+  "val": {
+    "loss": 0.7257643342018127,
+    "auc": 0.5152639487167416,
+    "ap": 0.5342538405361948,
+    "accuracy": 0.5,
+    "precision": 0.5,
+    "recall": 1.0,
+    "f1": 0.6666666666666666
+  },
+  "test": {
+    "loss": 0.7294802069664001,
+    "auc": 0.48316334336114286,
+    "ap": 0.514845219988612,
+    "accuracy": 0.5,
+    "precision": 0.5,
+    "recall": 1.0,
+    "f1": 0.6666666666666666
+  },
+  "interpretation": "If AUC drops strongly versus edge-feature models, edge_attr is the dominant signal."
+}

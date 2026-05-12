@@ -1,0 +1,31 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Logs
+*.log
+*.out
+
+# Model files
+*.h5
+*.dat
+
+# Generated results
+models/objects/
+models/graphs/
+models/cross_org_tabels/
+models/transfer_tables/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Optional: ignore local env files
+.env
+.venv/
+venv/
