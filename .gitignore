@@ -1,5 +1,4 @@
-# Ignore nested git repository
-GraphMMI/
+
 
 # Ignore all data folders
 data/
