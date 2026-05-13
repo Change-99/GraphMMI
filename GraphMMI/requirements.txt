@@ -1,0 +1,23 @@
+# ============================================================
+# GraphMMI — miRNA-mRNA Interaction Prediction
+# ============================================================
+#
+# Install: pip install -r requirements.txt
+# Or with conda: conda create -n graphmmi python=3.10 && conda activate graphmmi && pip install -r requirements.txt
+#
+# ---- Core (all scripts) ----
+numpy>=1.24,<3
+pandas>=2.0
+
+# ---- GNN pipeline (train_gnn_transfer.py, preprocess_graph_data.py, src/graphmmi/) ----
+torch>=2.4
+matplotlib>=3.8
+
+# ---- Baseline reproduction (baseline_ann_xgb_transfer.py) ----
+tensorflow>=2.16
+xgboost>=2.0
+seaborn>=0.13
+
+# ---- Optional dev tools ----
+# ipykernel    # for Jupyter notebooks
+# tqdm         # progress bars (not used yet but useful)

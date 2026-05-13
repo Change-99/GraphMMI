@@ -13,6 +13,12 @@ data/
 __pycache__/
 *.pyc
 
+# Experiment outputs and local matplotlib cache
+runs/
+**/runs/
+.mplconfig/
+**/.mplconfig/
+
 # Virtual environments
 venv/
 .venv/
