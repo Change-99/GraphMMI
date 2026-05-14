@@ -28,7 +28,7 @@ import torch.nn.functional as F
 
 sys.path.insert(0, str(ROOT / "src"))
 from graphmmi import GraphMMILinkPredictor, load_graph_bundle, pair_feature_dim, pair_feature_matrix, sample_negative_edges
-from graphmmi.data import GraphBundle
+from graphmmi.data import GraphBundle, positive_pair_set
 
 
 SPECIES_ORDER = ["human", "cow", "mouse", "worm"]
@@ -315,6 +315,7 @@ def load_or_create_fixed_negatives(
         strategy=eval_negative_strategy(args),
         generator=generator,
         node_sequences=graph.node_sequences,
+        blocked_pairs=graph.positive_pair_cache,
     )
     torch.save(
         {
@@ -470,6 +471,14 @@ def build_batch(
     neg_strategy: str,
     fixed_neg_edge_index: torch.Tensor | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor | None]:
+    if fixed_neg_edge_index is not None:
+        cache_key = f"{split}:{edge_attr_mode}:{id(fixed_neg_edge_index)}"
+        cached = graph.batch_cache.get(cache_key)
+        if cached is not None:
+            return cached
+    else:
+        cache_key = ""
+
     generator = generator_for(device, seed)
     pos_edge_index = graph.split_pos_edge_index[split]
     if fixed_neg_edge_index is None:
@@ -481,6 +490,7 @@ def build_batch(
             strategy=neg_strategy,
             generator=generator,
             node_sequences=graph.node_sequences,
+            blocked_pairs=graph.positive_pair_cache,
         )
     else:
         neg_edge_index = fixed_neg_edge_index.to(device=pos_edge_index.device, dtype=torch.long)
@@ -498,6 +508,8 @@ def build_batch(
     labels = labels[order]
     if edge_attr is not None:
         edge_attr = edge_attr[order]
+    if fixed_neg_edge_index is not None:
+        graph.batch_cache[cache_key] = (edge_label_index, labels, edge_attr)
     return edge_label_index, labels, edge_attr
 
 
@@ -638,7 +650,9 @@ def train_on_graph(
 
 def load_one_graph(species: str, args: argparse.Namespace, device: torch.device) -> GraphBundle:
     path = args.processed_dir / species / "graph_inputs.pt"
-    return load_graph_bundle(path, device=device, load_edge_attr=args.keep_edge_attr_in_memory)
+    graph = load_graph_bundle(path, device=device, load_edge_attr=args.keep_edge_attr_in_memory)
+    graph.positive_pair_cache = positive_pair_set(graph.all_positive_edge_index)
+    return graph
 
 
 @torch.no_grad()
@@ -679,6 +693,9 @@ def _free_graph(graph: GraphBundle | None) -> None:
     """Move a graph bundle back to CPU so Python GC can reclaim GPU/RAM."""
     if graph is None:
         return
+    graph.batch_cache.clear()
+    graph.pair_feature_cache.clear()
+    graph.positive_pair_cache = None
     for attr in ("x", "node_type", "species_id", "edge_index", "all_positive_edge_index"):
         t = getattr(graph, attr, None)
         if isinstance(t, Tensor):

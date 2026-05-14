@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +22,9 @@ class GraphBundle:
     node_sequences: np.ndarray
     node_feature_names: np.ndarray
     edge_attr_names: np.ndarray
+    positive_pair_cache: set[tuple[int, int]] | None = None
+    pair_feature_cache: dict[tuple[int, int], np.ndarray] = field(default_factory=dict)
+    batch_cache: dict[str, tuple[Tensor, Tensor, Tensor | None]] = field(default_factory=dict)
 
 
 def load_graph_bundle(
@@ -117,6 +120,7 @@ def sample_negative_edges(
     strategy: str = "endpoint_corrupt",
     generator: torch.Generator | None = None,
     node_sequences: np.ndarray | None = None,
+    blocked_pairs: set[tuple[int, int]] | None = None,
 ) -> Tensor:
     """Sample unobserved miRNA-mRNA pairs.
 
@@ -135,7 +139,7 @@ def sample_negative_edges(
     if mirna_nodes.numel() == 0 or mrna_nodes.numel() == 0:
         raise ValueError("Both miRNA and mRNA nodes are required for negative sampling.")
 
-    blocked = positive_pair_set(all_positive_edge_index)
+    blocked = blocked_pairs if blocked_pairs is not None else positive_pair_set(all_positive_edge_index)
     sampled: list[tuple[int, int]] = []
     local_seen: set[tuple[int, int]] = set()
     max_attempts = max(10000, n_neg * 200)
@@ -289,6 +293,42 @@ def normalized_substring_count(pattern: str, text: str) -> float:
     return float(count / max(len(text) - len(pattern) + 1, 1))
 
 
+def pair_feature_row(src: int, dst: int, sequences: np.ndarray) -> np.ndarray:
+    mirna_seq = sequences[int(src)].upper().replace("T", "U")
+    mrna_seq = sequences[int(dst)].upper().replace("T", "U")
+    mirna_len = len(mirna_seq)
+    mrna_len = len(mrna_seq)
+    mirna_log_len = float(np.log1p(mirna_len))
+    mrna_log_len = float(np.log1p(mrna_len))
+    mirna_gc = gc_fraction(mirna_seq)
+    mrna_gc = gc_fraction(mrna_seq)
+
+    seed_2_7 = reverse_complement(mirna_seq[1:7])
+    seed_3_8 = reverse_complement(mirna_seq[2:8])
+    seed_2_8 = reverse_complement(mirna_seq[1:8])
+    seed_patterns = [seed_2_7, seed_3_8, seed_2_8]
+    counts = [normalized_substring_count(seed, mrna_seq) for seed in seed_patterns]
+    exact = [1.0 if count > 0.0 else 0.0 for count in counts]
+    seed_gc = [gc_fraction(seed) for seed in [mirna_seq[1:7], mirna_seq[2:8], mirna_seq[1:8]]]
+
+    return np.asarray(
+        [
+            mirna_log_len,
+            mrna_log_len,
+            mirna_log_len / max(mrna_log_len, 1e-6),
+            abs(mirna_log_len - mrna_log_len),
+            mirna_gc,
+            mrna_gc,
+            abs(mirna_gc - mrna_gc),
+            mirna_gc * mrna_gc,
+            *exact,
+            *counts,
+            *seed_gc,
+        ],
+        dtype=np.float32,
+    )
+
+
 def pair_feature_matrix(edge_index: Tensor, graph: GraphBundle) -> Tensor:
     """Compute label-safe pair features for positive and dynamic negative edges.
 
@@ -300,38 +340,13 @@ def pair_feature_matrix(edge_index: Tensor, graph: GraphBundle) -> Tensor:
 
     pairs = edge_index.detach().cpu().numpy().T
     sequences = np.asarray(graph.node_sequences).astype(str)
-    rows: list[list[float]] = []
-    for src, dst in pairs:
-        mirna_seq = sequences[int(src)].upper().replace("T", "U")
-        mrna_seq = sequences[int(dst)].upper().replace("T", "U")
-        mirna_len = len(mirna_seq)
-        mrna_len = len(mrna_seq)
-        mirna_log_len = float(np.log1p(mirna_len))
-        mrna_log_len = float(np.log1p(mrna_len))
-        mirna_gc = gc_fraction(mirna_seq)
-        mrna_gc = gc_fraction(mrna_seq)
-
-        seed_2_7 = reverse_complement(mirna_seq[1:7])
-        seed_3_8 = reverse_complement(mirna_seq[2:8])
-        seed_2_8 = reverse_complement(mirna_seq[1:8])
-        seed_patterns = [seed_2_7, seed_3_8, seed_2_8]
-        counts = [normalized_substring_count(seed, mrna_seq) for seed in seed_patterns]
-        exact = [1.0 if count > 0.0 else 0.0 for count in counts]
-        seed_gc = [gc_fraction(seed) for seed in [mirna_seq[1:7], mirna_seq[2:8], mirna_seq[1:8]]]
-
-        rows.append(
-            [
-                mirna_log_len,
-                mrna_log_len,
-                mirna_log_len / max(mrna_log_len, 1e-6),
-                abs(mirna_log_len - mrna_log_len),
-                mirna_gc,
-                mrna_gc,
-                abs(mirna_gc - mrna_gc),
-                mirna_gc * mrna_gc,
-                *exact,
-                *counts,
-                *seed_gc,
-            ]
-        )
-    return torch.tensor(rows, dtype=torch.float32, device=edge_index.device)
+    rows = np.empty((pairs.shape[0], pair_feature_dim()), dtype=np.float32)
+    cache = graph.pair_feature_cache
+    for row_idx, (src, dst) in enumerate(pairs):
+        key = (int(src), int(dst))
+        features = cache.get(key)
+        if features is None:
+            features = pair_feature_row(key[0], key[1], sequences)
+            cache[key] = features
+        rows[row_idx] = features
+    return torch.as_tensor(rows, dtype=torch.float32, device=edge_index.device)
