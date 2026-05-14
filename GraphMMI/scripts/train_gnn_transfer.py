@@ -131,6 +131,12 @@ def parse_args() -> argparse.Namespace:
             "positive and dynamic negative edges."
         ),
     )
+    parser.add_argument("--mirna-sim-edges", action="store_true",
+                        help="Use miRNA-miRNA similarity edges in message passing.")
+    parser.add_argument("--mrna-sim-edges", action="store_true",
+                        help="Use mRNA-mRNA similarity edges in message passing.")
+    parser.add_argument("--mirna-sim-topk", type=int, default=5)
+    parser.add_argument("--mrna-sim-topk", type=int, default=5)
     return parser.parse_args()
 
 
@@ -223,6 +229,7 @@ def build_model(
 ) -> GraphMMILinkPredictor:
     id_dim, species_dim = embedding_dims_for_setting(args, setting)
     edge_attr_dim = pair_feature_dim() if args.edge_attr_mode == "pair" else 0
+    use_edge_weight = (encoder == "gatv2") and (args.mirna_sim_edges or args.mrna_sim_edges)
     return GraphMMILinkPredictor(
         encoder_name=encoder,
         num_numeric_features=int(graph.x.size(1)),
@@ -239,6 +246,7 @@ def build_model(
         residual=args.residual,
         layer_norm=args.layer_norm,
         decoder_layer_norm=args.decoder_layer_norm,
+        use_edge_weight=use_edge_weight,
     ).to(device)
 
 
@@ -273,6 +281,14 @@ def collect_memory(device: torch.device) -> None:
     gc.collect()
     if device.type == "cuda":
         torch.cuda.empty_cache()
+
+
+def resolve_edge_index_for_training(graph: GraphBundle, args: argparse.Namespace) -> tuple[Tensor, Tensor | None]:
+    """Return (edge_index, edge_weight) preferring augmented graph when sim flags are set."""
+    use_sim = args.mirna_sim_edges or args.mrna_sim_edges
+    if use_sim and graph.augmented_edge_index is not None:
+        return graph.augmented_edge_index, graph.augmented_edge_weight
+    return graph.edge_index, None
 
 
 def eval_negative_strategy(args: argparse.Namespace) -> str:
@@ -534,7 +550,8 @@ def predict_split(
         neg_strategy=eval_negative_strategy(args) if split in {"val", "test"} else args.neg_strategy,
         fixed_neg_edge_index=fixed_neg_edge_index,
     )
-    logits = model(graph.x, graph.node_type, graph.species_id, graph.edge_index, edge_label_index, edge_attr)
+    mp_edge_index, mp_edge_weight = resolve_edge_index_for_training(graph, args)
+    logits = model(graph.x, graph.node_type, graph.species_id, mp_edge_index, edge_label_index, edge_attr, edge_weight=mp_edge_weight)
     loss = F.binary_cross_entropy_with_logits(logits, labels)
     return labels, logits, float(loss.item())
 
@@ -611,7 +628,8 @@ def train_on_graph(
             neg_strategy=args.neg_strategy,
         )
         optimizer.zero_grad(set_to_none=True)
-        logits = model(graph.x, graph.node_type, graph.species_id, graph.edge_index, edge_label_index, edge_attr)
+        mp_edge_index, mp_edge_weight = resolve_edge_index_for_training(graph, args)
+        logits = model(graph.x, graph.node_type, graph.species_id, mp_edge_index, edge_label_index, edge_attr, edge_weight=mp_edge_weight)
         loss = F.binary_cross_entropy_with_logits(logits, labels)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5.0)

@@ -73,6 +73,18 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Keep HotPairing* columns in edge_attr.",
     )
+    parser.add_argument(
+        "--mirna-sim-edges",
+        action="store_true",
+        help="Build miRNA-miRNA similarity edges (seed identity + k-mer cosine top-k).",
+    )
+    parser.add_argument(
+        "--mrna-sim-edges",
+        action="store_true",
+        help="Build mRNA-mRNA similarity edges (target_seq k-mer cosine top-k).",
+    )
+    parser.add_argument("--mirna-sim-topk", type=int, default=5)
+    parser.add_argument("--mrna-sim-topk", type=int, default=5)
     return parser.parse_args()
 
 
@@ -420,6 +432,176 @@ def export_edges_csv(edges: pd.DataFrame, path: Path) -> None:
     edges[present].to_csv(path, index=False)
 
 
+def _cosine_similarity_topk(
+    vecs: np.ndarray,
+    topk: int,
+    rng: np.random.Generator,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Top-k cosine similarity edges among rows of *vecs* (undirected, no self-loops)."""
+    n = vecs.shape[0]
+    if n < 2:
+        return np.empty((2, 0), dtype=np.int64), np.empty((0,), dtype=np.float32)
+    norms = np.linalg.norm(vecs, axis=1, keepdims=True)
+    norms = np.where(norms < 1e-12, 1.0, norms)
+    unit = vecs.astype(np.float64) / norms
+    edges: list[tuple[int, int]] = []
+    weights: list[float] = []
+    effective_k = min(topk, n - 1)
+    for i in range(n):
+        sim = unit[i] @ unit.T
+        sim[i] = -2.0
+        if effective_k >= n:
+            top_indices = np.argsort(-sim)[:effective_k]
+        else:
+            top_indices = np.argpartition(-sim, effective_k)[:effective_k]
+        for j in top_indices:
+            score = float(sim[j])
+            if score <= 0.0:
+                continue
+            edges.append((i, j))
+            weights.append(score)
+    if not edges:
+        return np.empty((2, 0), dtype=np.int64), np.empty((0,), dtype=np.float32)
+    idx = np.asarray(edges, dtype=np.int64).T
+    w = np.asarray(weights, dtype=np.float32)
+    return idx, w
+
+
+def build_mirna_similarity_edges(
+    nodes: pd.DataFrame,
+    x_raw: np.ndarray,
+    kmer_sizes: list[int],
+    args: argparse.Namespace,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """miRNA-miRNA edges: seed identity + k-mer cosine top-k."""
+    rng = np.random.default_rng(args.seed)
+    mirna = nodes[nodes["node_type"].eq("mirna")].copy()
+    if len(mirna) < 2:
+        empty_ei = np.empty((2, 0), dtype=np.int64)
+        return empty_ei, np.full((0,), 2, dtype=np.int64), np.empty((0,), dtype=np.float32)
+    local_to_global: dict[int, int] = {i: int(mirna.iloc[i].node_idx) for i in range(len(mirna))}
+    seqs = mirna["sequence"].fillna("").astype(str).tolist()
+    edge_set: dict[tuple[int, int], float] = {}
+
+    # seed identity (seed_2_7 and seed_3_8)
+    seed_names = [
+        ("seed_2_7", slice(1, 7)),
+        ("seed_3_8", slice(2, 8)),
+    ]
+    for _name, slc in seed_names:
+        seed_map: dict[str, list[int]] = {}
+        for local_i, seq in enumerate(seqs):
+            seed = seq[slc] if len(seq) >= slc.stop else ""
+            if not seed:
+                continue
+            seed_map.setdefault(seed, []).append(local_i)
+        for group in seed_map.values():
+            if len(group) < 2:
+                continue
+            for a in range(len(group)):
+                for b in range(a + 1, len(group)):
+                    gi = local_to_global[group[a]]
+                    gj = local_to_global[group[b]]
+                    key = (min(gi, gj), max(gi, gj))
+                    edge_set[key] = max(edge_set.get(key, 0.0), 1.0)
+
+    # k-mer cosine top-k
+    kmer_cols = [
+        col for col in nodes.columns
+        if col.startswith("kmer1_") or col.startswith("kmer2_") or col.startswith("kmer3_")
+    ]
+    if kmer_cols:
+        kmer_vecs = mirna[kmer_cols].to_numpy(dtype=np.float32)
+        cos_idx, cos_w = _cosine_similarity_topk(kmer_vecs, args.mirna_sim_topk, rng)
+        for col in range(cos_idx.shape[1]):
+            li, lj = int(cos_idx[0, col]), int(cos_idx[1, col])
+            gi, gj = local_to_global[li], local_to_global[lj]
+            key = (min(gi, gj), max(gi, gj))
+            edge_set[key] = max(edge_set.get(key, 0.0), float(cos_w[col]))
+
+    if not edge_set:
+        empty_ei = np.empty((2, 0), dtype=np.int64)
+        return empty_ei, np.full((0,), 2, dtype=np.int64), np.empty((0,), dtype=np.float32)
+
+    pairs = sorted(edge_set.keys())
+    ei = np.array(pairs, dtype=np.int64).T
+    ew = np.array([edge_set[key] for key in pairs], dtype=np.float32)
+    et = np.full(len(pairs), 2, dtype=np.int64)
+    return ei, et, ew
+
+
+def build_mrna_similarity_edges(
+    nodes: pd.DataFrame,
+    args: argparse.Namespace,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """mRNA-mRNA edges: target_seq k-mer cosine top-k."""
+    rng = np.random.default_rng(args.seed)
+    mrna = nodes[nodes["node_type"].eq("mrna")].copy()
+    if len(mrna) < 2:
+        empty_ei = np.empty((2, 0), dtype=np.int64)
+        return empty_ei, np.full((0,), 3, dtype=np.int64), np.empty((0,), dtype=np.float32)
+    local_to_global: dict[int, int] = {i: int(mrna.iloc[i].node_idx) for i in range(len(mrna))}
+    target_seqs = mrna.get("target_seq", pd.Series([""] * len(mrna), index=mrna.index))
+    target_seqs = target_seqs.fillna("").astype(str).tolist()
+
+    # compute k-mer frequencies from target_seq
+    kmer_names = kmer_feature_names(args.kmer_sizes)
+    vecs = np.zeros((len(mrna), len(kmer_names)), dtype=np.float32)
+    for i, seq in enumerate(target_seqs):
+        features = sequence_numeric_features(seq, args.kmer_sizes)
+        for j, name in enumerate(kmer_names):
+            vecs[i, j] = float(features.get(name, 0.0))
+
+    cos_idx, cos_w = _cosine_similarity_topk(vecs, args.mrna_sim_topk, rng)
+    if cos_idx.size == 0:
+        empty_ei = np.empty((2, 0), dtype=np.int64)
+        return empty_ei, np.full((0,), 3, dtype=np.int64), np.empty((0,), dtype=np.float32)
+
+    pairs: list[tuple[int, int]] = []
+    weights: list[float] = []
+    edge_set: set[tuple[int, int]] = set()
+    for col in range(cos_idx.shape[1]):
+        li, lj = int(cos_idx[0, col]), int(cos_idx[1, col])
+        gi, gj = local_to_global[li], local_to_global[lj]
+        key = (min(gi, gj), max(gi, gj))
+        if key in edge_set:
+            continue
+        edge_set.add(key)
+        pairs.append(key)
+        weights.append(float(cos_w[col]))
+
+    if not pairs:
+        empty_ei = np.empty((2, 0), dtype=np.int64)
+        return empty_ei, np.full((0,), 3, dtype=np.int64), np.empty((0,), dtype=np.float32)
+
+    ei = np.array(pairs, dtype=np.int64).T
+    ew = np.array(weights, dtype=np.float32)
+    et = np.full(len(pairs), 3, dtype=np.int64)
+    return ei, et, ew
+
+
+def homogenize_edge_index(
+    edge_index_undirected: np.ndarray,
+    mirna_sim: tuple[np.ndarray, np.ndarray, np.ndarray],
+    mrna_sim: tuple[np.ndarray, np.ndarray, np.ndarray],
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Merge interaction + similarity edges into one homogeneous graph."""
+    half = edge_index_undirected.shape[1] // 2
+    ei = [edge_index_undirected]
+    et = [np.concatenate([np.zeros(half, dtype=np.int64), np.ones(half, dtype=np.int64)])]
+    ew = [np.ones(edge_index_undirected.shape[1], dtype=np.float32)]
+    for sim_ei, sim_et, sim_ew in (mirna_sim, mrna_sim):
+        if sim_ei.size:
+            ei.append(sim_ei)
+            et.append(sim_et)
+            ew.append(sim_ew)
+    return (
+        np.concatenate(ei, axis=1) if len(ei) > 1 else ei[0],
+        np.concatenate(et) if len(et) > 1 else et[0],
+        np.concatenate(ew) if len(ew) > 1 else ew[0],
+    )
+
+
 def export_species_graph(
     species: str,
     edges: pd.DataFrame,
@@ -459,6 +641,17 @@ def export_species_graph(
     edge_index = train_edges[["src_idx", "dst_idx"]].to_numpy(dtype=np.int64).T
     edge_index_undirected = np.concatenate([edge_index, edge_index[::-1]], axis=1) if edge_index.size else edge_index
     all_pos_edge_index = clean_edges[["src_idx", "dst_idx"]].to_numpy(dtype=np.int64).T
+
+    # similarity edges (homogeneous: miRNA-miRNA + mRNA-mRNA)
+    empty_ei = np.empty((2, 0), dtype=np.int64); empty_et = np.empty((0,), dtype=np.int64); empty_ew = np.empty((0,), dtype=np.float32)
+    mirna_sim: tuple[np.ndarray, np.ndarray, np.ndarray] = (empty_ei, empty_et, empty_ew)
+    mrna_sim: tuple[np.ndarray, np.ndarray, np.ndarray] = (empty_ei, empty_et, empty_ew)
+    if args.mirna_sim_edges:
+        mirna_sim = build_mirna_similarity_edges(nodes, x_raw, args.kmer_sizes, args)
+    if args.mrna_sim_edges:
+        mrna_sim = build_mrna_similarity_edges(nodes, args)
+    aug_ei, aug_et, aug_ew = homogenize_edge_index(edge_index_undirected, mirna_sim, mrna_sim)
+
     train_node_indices = (
         np.unique(edge_index.reshape(-1)).astype(np.int64)
         if edge_index.size
@@ -482,6 +675,15 @@ def export_species_graph(
         "edge_attr_names": np.asarray(edge_attr_columns, dtype=str),
         "edge_attr_mean": edge_attr_mean,
         "edge_attr_scale": edge_attr_scale,
+        "augmented_edge_index": aug_ei,
+        "augmented_edge_type": aug_et,
+        "augmented_edge_weight": aug_ew,
+        "similarity_edge_index_mirna": mirna_sim[0],
+        "similarity_edge_type_mirna": mirna_sim[1],
+        "similarity_edge_weight_mirna": mirna_sim[2],
+        "similarity_edge_index_mrna": mrna_sim[0],
+        "similarity_edge_type_mrna": mrna_sim[1],
+        "similarity_edge_weight_mrna": mrna_sim[2],
     }
     for split_name in ["train", "val", "test"]:
         split_mask = clean_edges["split"].eq(split_name).to_numpy()
@@ -533,6 +735,16 @@ def export_species_graph(
             "num_train_graph_nodes_for_fit": int(train_node_indices.size),
         },
         "edge_attr_columns": edge_attr_columns,
+        "num_mirna_sim_edges": int(mirna_sim[0].shape[1]),
+        "num_mrna_sim_edges": int(mrna_sim[0].shape[1]),
+        "homogeneous_edge_types": {
+            "0": "miRNA->mRNA forward (train positive)",
+            "1": "mRNA->miRNA reverse",
+            "2": "miRNA-miRNA similarity",
+            "3": "mRNA-mRNA similarity",
+        },
+        "mirna_sim_topk": args.mirna_sim_topk if args.mirna_sim_edges else 0,
+        "mrna_sim_topk": args.mrna_sim_topk if args.mrna_sim_edges else 0,
         "negative_sampling": (
             "Dynamic only: sample from all miRNA-mRNA pairs excluding all known positive pairs. "
             "Negative edges are not stored and do not enter edge_index."

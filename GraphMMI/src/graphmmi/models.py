@@ -75,7 +75,7 @@ class GraphSAGEEncoder(nn.Module):
         self.residual = residual
         self.layer_norm = layer_norm
 
-    def forward(self, x: Tensor, edge_index: Tensor) -> Tensor:
+    def forward(self, x: Tensor, edge_index: Tensor, edge_weight: Tensor | None = None) -> Tensor:
         h = x
         for layer_idx, layer in enumerate(self.layers):
             h_in = h
@@ -101,6 +101,7 @@ class GATv2Layer(nn.Module):
         concat: bool = True,
         dropout: float = 0.3,
         negative_slope: float = 0.2,
+        use_edge_weight: bool = False,
     ) -> None:
         super().__init__()
         self.heads = heads
@@ -108,13 +109,14 @@ class GATv2Layer(nn.Module):
         self.concat = concat
         self.dropout = dropout
         self.negative_slope = negative_slope
+        self.use_edge_weight = use_edge_weight
         self.lin_src = nn.Linear(in_channels, heads * out_channels, bias=False)
         self.lin_dst = nn.Linear(in_channels, heads * out_channels, bias=False)
         self.att = nn.Parameter(torch.empty(heads, out_channels))
         self.bias = nn.Parameter(torch.zeros(heads * out_channels if concat else out_channels))
         nn.init.xavier_uniform_(self.att)
 
-    def forward(self, x: Tensor, edge_index: Tensor) -> Tensor:
+    def forward(self, x: Tensor, edge_index: Tensor, edge_weight: Tensor | None = None) -> Tensor:
         loop = torch.arange(x.size(0), dtype=torch.long, device=x.device)
         src = torch.cat([edge_index[0], loop], dim=0)
         dst = torch.cat([edge_index[1], loop], dim=0)
@@ -123,6 +125,11 @@ class GATv2Layer(nn.Module):
         messages = h_src[src]
         att_input = F.leaky_relu(messages + h_dst[dst], negative_slope=self.negative_slope)
         scores = (att_input * self.att).sum(dim=-1)
+        if self.use_edge_weight and edge_weight is not None:
+            loop_w = torch.zeros(x.size(0), device=x.device)
+            full_w = torch.cat([edge_weight, loop_w], dim=0)
+            weight_bias = torch.log(full_w.clamp_min(1e-8))
+            scores = scores + weight_bias.unsqueeze(-1).expand_as(scores)
 
         index = dst.unsqueeze(-1).expand_as(scores)
         max_per_dst = scores.new_full((x.size(0), self.heads), -torch.inf)
@@ -150,6 +157,7 @@ class GATv2Encoder(nn.Module):
         concat: bool = False,
         residual: bool = False,
         layer_norm: bool = False,
+        use_edge_weight: bool = False,
     ) -> None:
         super().__init__()
         self.layers = nn.ModuleList()
@@ -163,6 +171,7 @@ class GATv2Encoder(nn.Module):
                     heads=heads,
                     concat=concat,
                     dropout=dropout,
+                    use_edge_weight=use_edge_weight,
                 )
             )
             self.norms.append(nn.LayerNorm(hidden_dim))
@@ -170,11 +179,11 @@ class GATv2Encoder(nn.Module):
         self.residual = residual
         self.layer_norm = layer_norm
 
-    def forward(self, x: Tensor, edge_index: Tensor) -> Tensor:
+    def forward(self, x: Tensor, edge_index: Tensor, edge_weight: Tensor | None = None) -> Tensor:
         h = x
         for layer_idx, layer in enumerate(self.layers):
             h_in = h
-            h = layer(h, edge_index)
+            h = layer(h, edge_index, edge_weight=edge_weight)
             if self.layer_norm:
                 h = self.norms[layer_idx](h)
             if self.residual:
@@ -243,6 +252,7 @@ class GraphMMILinkPredictor(nn.Module):
         residual: bool = False,
         layer_norm: bool = False,
         decoder_layer_norm: bool = False,
+        use_edge_weight: bool = False,
     ) -> None:
         super().__init__()
         self.input_encoder = NodeInputEncoder(
@@ -271,6 +281,7 @@ class GraphMMILinkPredictor(nn.Module):
                 concat=gat_concat,
                 residual=residual,
                 layer_norm=layer_norm,
+                use_edge_weight=use_edge_weight,
             )
         else:
             raise ValueError(f"Unknown encoder_name: {encoder_name}")
@@ -281,9 +292,9 @@ class GraphMMILinkPredictor(nn.Module):
             layer_norm=decoder_layer_norm,
         )
 
-    def encode(self, x: Tensor, node_type: Tensor, species_id: Tensor, edge_index: Tensor) -> Tensor:
+    def encode(self, x: Tensor, node_type: Tensor, species_id: Tensor, edge_index: Tensor, edge_weight: Tensor | None = None) -> Tensor:
         h0 = self.input_encoder(x, node_type, species_id)
-        return self.gnn(h0, edge_index)
+        return self.gnn(h0, edge_index, edge_weight=edge_weight)
 
     def decode(self, z: Tensor, edge_label_index: Tensor, edge_attr: Tensor | None = None) -> Tensor:
         return self.decoder(z, edge_label_index, edge_attr)
@@ -296,6 +307,7 @@ class GraphMMILinkPredictor(nn.Module):
         edge_index: Tensor,
         edge_label_index: Tensor,
         edge_attr: Tensor | None = None,
+        edge_weight: Tensor | None = None,
     ) -> Tensor:
-        z = self.encode(x, node_type, species_id, edge_index)
+        z = self.encode(x, node_type, species_id, edge_index, edge_weight=edge_weight)
         return self.decode(z, edge_label_index, edge_attr)

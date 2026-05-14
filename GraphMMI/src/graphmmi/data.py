@@ -22,9 +22,23 @@ class GraphBundle:
     node_sequences: np.ndarray
     node_feature_names: np.ndarray
     edge_attr_names: np.ndarray
+    # multi-relational / similarity edge fields (optional, None when absent)
+    augmented_edge_index: Tensor | None = None
+    augmented_edge_type: Tensor | None = None
+    augmented_edge_weight: Tensor | None = None
+    similarity_edge_index_mirna: Tensor | None = None
+    similarity_edge_index_mrna: Tensor | None = None
+    similarity_edge_weight_mirna: Tensor | None = None
+    similarity_edge_weight_mrna: Tensor | None = None
     positive_pair_cache: set[tuple[int, int]] | None = None
     pair_feature_cache: dict[tuple[int, int], np.ndarray] = field(default_factory=dict)
     batch_cache: dict[str, tuple[Tensor, Tensor, Tensor | None]] = field(default_factory=dict)
+
+
+def _maybe_tensor(value: Any, dtype: torch.dtype, device: torch.device) -> Tensor | None:
+    if value is None:
+        return None
+    return torch.as_tensor(value, dtype=dtype, device=device)
 
 
 def load_graph_bundle(
@@ -61,6 +75,13 @@ def load_graph_bundle(
         node_sequences=np.asarray(data.get("node_sequences", np.array([""] * len(data["node_ids"])))),
         node_feature_names=np.asarray(data["node_feature_names"]),
         edge_attr_names=np.asarray(data["edge_attr_names"] if load_edge_attr else []),
+        augmented_edge_index=_maybe_tensor(data.get("augmented_edge_index"), dtype=torch.long, device=device),
+        augmented_edge_type=_maybe_tensor(data.get("augmented_edge_type"), dtype=torch.long, device=device),
+        augmented_edge_weight=_maybe_tensor(data.get("augmented_edge_weight"), dtype=torch.float32, device=device),
+        similarity_edge_index_mirna=_maybe_tensor(data.get("similarity_edge_index_mirna"), dtype=torch.long, device=device),
+        similarity_edge_index_mrna=_maybe_tensor(data.get("similarity_edge_index_mrna"), dtype=torch.long, device=device),
+        similarity_edge_weight_mirna=_maybe_tensor(data.get("similarity_edge_weight_mirna"), dtype=torch.float32, device=device),
+        similarity_edge_weight_mrna=_maybe_tensor(data.get("similarity_edge_weight_mrna"), dtype=torch.float32, device=device),
     )
 
 
