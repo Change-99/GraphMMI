@@ -66,6 +66,49 @@ def positive_pair_set(edge_index: Tensor) -> set[tuple[int, int]]:
     return {(int(src), int(dst)) for src, dst in edge_cpu.T}
 
 
+def _sample_from_nodes(nodes: Tensor, weights: Tensor | None, generator: torch.Generator | None) -> int:
+    if weights is None:
+        idx = torch.randint(nodes.numel(), (1,), generator=generator, device=nodes.device)
+    else:
+        idx = torch.multinomial(weights, 1, replacement=True, generator=generator)
+    return int(nodes[idx].item())
+
+
+def _degree_weights(nodes: Tensor, positive_edge_index: Tensor, row: int) -> Tensor:
+    degrees = torch.bincount(positive_edge_index[row], minlength=int(nodes.max().item()) + 1).float()
+    weights = degrees[nodes].clamp_min(1.0)
+    return weights / weights.sum().clamp_min(1.0)
+
+
+def _seed_patterns(mirna_seq: str) -> list[str]:
+    mirna_seq = str(mirna_seq).upper().replace("T", "U")
+    return [
+        reverse_complement(mirna_seq[1:7]),
+        reverse_complement(mirna_seq[2:8]),
+        reverse_complement(mirna_seq[1:8]),
+    ]
+
+
+def _sequence_aware_mrna_candidates(
+    src: int,
+    mrna_nodes: Tensor,
+    node_sequences: np.ndarray,
+    cache: dict[int, list[int]],
+) -> list[int]:
+    if src in cache:
+        return cache[src]
+    sequences = np.asarray(node_sequences).astype(str)
+    patterns = [pattern for pattern in _seed_patterns(sequences[src]) if pattern]
+    candidates: list[int] = []
+    if patterns:
+        for dst in mrna_nodes.detach().cpu().tolist():
+            text = sequences[int(dst)].upper().replace("T", "U")
+            if any(pattern in text for pattern in patterns):
+                candidates.append(int(dst))
+    cache[src] = candidates
+    return candidates
+
+
 def sample_negative_edges(
     pos_edge_index: Tensor,
     node_type: Tensor,
@@ -73,6 +116,7 @@ def sample_negative_edges(
     neg_ratio: float = 1.0,
     strategy: str = "endpoint_corrupt",
     generator: torch.Generator | None = None,
+    node_sequences: np.ndarray | None = None,
 ) -> Tensor:
     """Sample unobserved miRNA-mRNA pairs.
 
@@ -96,6 +140,14 @@ def sample_negative_edges(
     local_seen: set[tuple[int, int]] = set()
     max_attempts = max(10000, n_neg * 200)
     attempts = 0
+    if strategy == "random":
+        strategy = "uniform"
+    mirna_degree_weights = None
+    mrna_degree_weights = None
+    if strategy == "degree_aware":
+        mirna_degree_weights = _degree_weights(mirna_nodes, all_positive_edge_index, row=0)
+        mrna_degree_weights = _degree_weights(mrna_nodes, all_positive_edge_index, row=1)
+    sequence_cache: dict[int, list[int]] = {}
 
     while len(sampled) < n_neg and attempts < max_attempts:
         attempts += 1
@@ -109,6 +161,29 @@ def sample_negative_edges(
             else:
                 new_src = int(mirna_nodes[torch.randint(mirna_nodes.numel(), (1,), generator=generator, device=node_type.device)].item())
                 pair = (new_src, dst)
+        elif strategy == "degree_aware":
+            edge_idx = int(torch.randint(pos_edge_index.size(1), (1,), generator=generator, device=node_type.device).item())
+            src = int(pos_edge_index[0, edge_idx].item())
+            dst = int(pos_edge_index[1, edge_idx].item())
+            if bool(torch.randint(2, (1,), generator=generator, device=node_type.device).item()):
+                pair = (src, _sample_from_nodes(mrna_nodes, mrna_degree_weights, generator))
+            else:
+                pair = (_sample_from_nodes(mirna_nodes, mirna_degree_weights, generator), dst)
+        elif strategy == "sequence_aware":
+            if node_sequences is None:
+                raise ValueError("node_sequences is required for sequence_aware negative sampling.")
+            edge_idx = int(torch.randint(pos_edge_index.size(1), (1,), generator=generator, device=node_type.device).item())
+            src = int(pos_edge_index[0, edge_idx].item())
+            candidates = _sequence_aware_mrna_candidates(src, mrna_nodes, node_sequences, sequence_cache)
+            candidates = [dst for dst in candidates if (src, dst) not in blocked and (src, dst) not in local_seen]
+            if candidates:
+                idx = int(torch.randint(len(candidates), (1,), generator=generator, device=node_type.device).item())
+                pair = (src, candidates[idx])
+            else:
+                pair = (
+                    src,
+                    int(mrna_nodes[torch.randint(mrna_nodes.numel(), (1,), generator=generator, device=node_type.device)].item()),
+                )
         elif strategy == "uniform":
             pair = (
                 int(mirna_nodes[torch.randint(mirna_nodes.numel(), (1,), generator=generator, device=node_type.device)].item()),

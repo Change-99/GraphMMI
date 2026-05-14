@@ -406,23 +406,38 @@ def binary_auc(labels: np.ndarray, scores: np.ndarray) -> float:
     return float((sum_pos_ranks - n_pos * (n_pos + 1) / 2.0) / (n_pos * n_neg))
 
 
+def average_precision_np(labels: np.ndarray, scores: np.ndarray) -> float:
+    labels = labels.astype(np.int64)
+    n_pos = int(labels.sum())
+    if n_pos == 0:
+        return float("nan")
+    order = np.argsort(-scores, kind="mergesort")
+    sorted_labels = labels[order]
+    tp = np.cumsum(sorted_labels)
+    precision = tp / (np.arange(len(sorted_labels)) + 1)
+    return float((precision * sorted_labels).sum() / n_pos)
+
+
 def classification_metrics(labels: np.ndarray, probs: np.ndarray, threshold: float) -> dict[str, float]:
-    labels_bool = labels.astype(bool)
-    pred = probs >= threshold
-    tp = int(np.logical_and(pred, labels_bool).sum())
-    tn = int(np.logical_and(~pred, ~labels_bool).sum())
-    fp = int(np.logical_and(pred, ~labels_bool).sum())
-    fn = int(np.logical_and(~pred, labels_bool).sum())
+    labels_int = labels.astype(np.int64)
+    pred = (probs >= threshold).astype(np.int64)
+    tp = int((pred & labels_int == 1).sum())
+    tn = int(((pred == 0) & (labels_int == 0)).sum())
+    fp = int((pred & (labels_int == 0)).sum())
+    fn = int(((pred == 0) & (labels_int == 1)).sum())
+    n = tp + tn + fp + fn
+    acc = (tp + tn) / n if n else 0.0
     precision = tp / (tp + fp) if tp + fp else 0.0
     recall = tp / (tp + fn) if tp + fn else 0.0
     f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
-    accuracy = (tp + tn) / len(labels) if len(labels) else 0.0
+    denom = math.sqrt(max((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn), 1e-12))
+    mcc = ((tp * tn) - (fp * fn)) / denom
     return {
-        "accuracy": float(accuracy),
-        "precision": float(precision),
-        "recall": float(recall),
+        "acc": float(acc),
         "f1": float(f1),
+        "mcc": float(mcc),
         "auc": binary_auc(labels, probs),
+        "aupr": average_precision_np(labels, probs),
     }
 
 
@@ -693,7 +708,7 @@ def write_matrix_csv(matrix: np.ndarray, path: Path) -> None:
             writer.writerow([source, *[float(value) for value in values]])
 
 
-def plot_heatmap(matrix: np.ndarray, title: str, path: Path) -> None:
+def plot_heatmap(matrix: np.ndarray, title: str, path: Path, metric: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     import matplotlib
 
@@ -705,13 +720,20 @@ def plot_heatmap(matrix: np.ndarray, title: str, path: Path) -> None:
     except ModuleNotFoundError:
         sns = None
 
+    if metric == "mcc":
+        vmin, vmax = -1.0, 1.0
+        cmap = "coolwarm"
+    else:
+        vmin, vmax = 0.0, 1.0
+        cmap = "viridis"
+
     fig, ax = plt.subplots(figsize=(6.2, 5.2), dpi=180)
     if sns is not None:
         sns.heatmap(
             matrix,
-            vmin=0.0,
-            vmax=1.0,
-            cmap="RdBu_r",
+            vmin=vmin,
+            vmax=vmax,
+            cmap=cmap,
             annot=True,
             fmt=".3f",
             xticklabels=SPECIES_ORDER,
@@ -721,7 +743,7 @@ def plot_heatmap(matrix: np.ndarray, title: str, path: Path) -> None:
             ax=ax,
         )
     else:
-        im = ax.imshow(matrix, cmap="RdBu_r", vmin=0.0, vmax=1.0)
+        im = ax.imshow(matrix, cmap=cmap, vmin=vmin, vmax=vmax)
         ax.set_xticks(np.arange(len(SPECIES_ORDER)), labels=SPECIES_ORDER)
         ax.set_yticks(np.arange(len(SPECIES_ORDER)), labels=SPECIES_ORDER)
         for i in range(matrix.shape[0]):
@@ -737,7 +759,7 @@ def plot_heatmap(matrix: np.ndarray, title: str, path: Path) -> None:
 
 
 def write_matrices_and_heatmaps(rows: list[dict[str, Any]], run_dir: Path) -> None:
-    metrics = ["accuracy", "precision", "recall", "f1", "auc"]
+    metrics = ["aupr", "acc", "f1", "mcc", "auc"]
     models = sorted({row["model"] for row in rows})
     protocols = sorted({row["protocol"] for row in rows})
     for model in models:
@@ -750,6 +772,7 @@ def write_matrices_and_heatmaps(rows: list[dict[str, Any]], run_dir: Path) -> No
                     matrix,
                     title=f"{model.upper()} {protocol.replace('_', ' ')} {metric.upper()}",
                     path=run_dir / "heatmaps" / f"{base_name}_heatmap.png",
+                    metric=metric,
                 )
 
 

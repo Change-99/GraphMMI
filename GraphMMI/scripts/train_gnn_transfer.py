@@ -33,6 +33,8 @@ from graphmmi.data import GraphBundle
 
 SPECIES_ORDER = ["human", "cow", "mouse", "worm"]
 METRICS = ["auc", "aupr", "acc", "f1", "mcc"]
+NEGATIVE_STRATEGIES = ["endpoint_corrupt", "random", "uniform", "degree_aware", "sequence_aware"]
+ZERO_SHOT_SETTINGS = {"zero_shot", "strict_zero_shot", "calibrated_zero_shot"}
 
 
 @dataclass
@@ -58,7 +60,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--run-root", type=Path, default=ROOT / "runs/gnn_transfer")
     parser.add_argument("--species", nargs="+", default=SPECIES_ORDER, choices=SPECIES_ORDER)
     parser.add_argument("--encoders", nargs="+", default=["graphsage", "gatv2"], choices=["graphsage", "gatv2"])
-    parser.add_argument("--settings", nargs="+", default=["zero_shot", "finetune"], choices=["zero_shot", "finetune"])
+    parser.add_argument(
+        "--settings",
+        nargs="+",
+        default=["strict_zero_shot", "calibrated_zero_shot", "finetune"],
+        choices=["zero_shot", "strict_zero_shot", "calibrated_zero_shot", "finetune"],
+        help=(
+            "zero_shot is kept as a backward-compatible alias for calibrated_zero_shot. "
+            "strict_zero_shot uses a fixed threshold; calibrated_zero_shot selects the "
+            "threshold on target validation data; finetune updates target parameters."
+        ),
+    )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--epochs", type=int, default=40)
@@ -68,14 +80,36 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--finetune-lr", type=float, default=5e-4)
     parser.add_argument("--weight-decay", type=float, default=1e-4)
+    parser.add_argument("--neg-strategy", choices=NEGATIVE_STRATEGIES, default="endpoint_corrupt")
+    parser.add_argument(
+        "--eval-neg-strategy",
+        choices=["same", *NEGATIVE_STRATEGIES],
+        default="same",
+        help="Negative sampling strategy for fixed val/test negatives. 'same' reuses --neg-strategy.",
+    )
     parser.add_argument("--neg-ratio", type=float, default=1.0)
     parser.add_argument("--eval-neg-ratio", type=float, default=1.0)
+    parser.add_argument(
+        "--fixed-eval-negatives",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Fix and cache validation/test negatives per target species for comparable metrics.",
+    )
+    parser.add_argument(
+        "--refresh-fixed-negatives",
+        action="store_true",
+        help="Regenerate cached fixed validation/test negatives even if cache files exist.",
+    )
     parser.add_argument("--threshold", type=float, default=0.5)
     parser.add_argument("--threshold-metric", choices=["mcc", "f1", "acc"], default="mcc")
+    parser.add_argument("--finetune-strategy", choices=["full", "last_layer", "decoder"], default="full")
     parser.add_argument("--graphsage-hidden-dim", type=int, default=128)
     parser.add_argument("--gatv2-hidden-dim", type=int, default=64)
     parser.add_argument("--num-layers", type=int, default=2)
     parser.add_argument("--dropout", type=float, default=0.3)
+    parser.add_argument("--residual", action="store_true", help="Use residual connections in GNN layers.")
+    parser.add_argument("--layer-norm", action="store_true", help="Use LayerNorm in GNN layers.")
+    parser.add_argument("--decoder-layer-norm", action="store_true", help="Use LayerNorm in the link decoder MLP.")
     parser.add_argument("--gat-heads", type=int, default=2)
     parser.add_argument("--gat-concat", action="store_true")
     parser.add_argument("--id-embedding-dim", type=int, default=32)
@@ -175,7 +209,7 @@ def hidden_dim_for_encoder(args: argparse.Namespace, encoder: str) -> int:
 
 
 def embedding_dims_for_setting(args: argparse.Namespace, setting: str) -> tuple[int, int]:
-    if setting == "zero_shot":
+    if setting in ZERO_SHOT_SETTINGS:
         return 0, 0
     return args.id_embedding_dim, args.species_embedding_dim
 
@@ -202,13 +236,22 @@ def build_model(
         id_embedding_dim=id_dim,
         type_embedding_dim=args.type_embedding_dim,
         species_embedding_dim=species_dim,
+        residual=args.residual,
+        layer_norm=args.layer_norm,
+        decoder_layer_norm=args.decoder_layer_norm,
     ).to(device)
 
 
-def compatible_state_dict(source_state: dict[str, torch.Tensor], target_model: torch.nn.Module) -> dict[str, torch.Tensor]:
+def compatible_state_dict(
+    source_state: dict[str, torch.Tensor],
+    target_model: torch.nn.Module,
+    skip_prefixes: tuple[str, ...] = (),
+) -> dict[str, torch.Tensor]:
     target_state = target_model.state_dict()
     compatible: dict[str, torch.Tensor] = {}
     for key, value in source_state.items():
+        if any(key.startswith(prefix) for prefix in skip_prefixes):
+            continue
         if key in target_state and tuple(target_state[key].shape) == tuple(value.shape):
             compatible[key] = value
     return compatible
@@ -230,6 +273,97 @@ def collect_memory(device: torch.device) -> None:
     gc.collect()
     if device.type == "cuda":
         torch.cuda.empty_cache()
+
+
+def eval_negative_strategy(args: argparse.Namespace) -> str:
+    return args.neg_strategy if args.eval_neg_strategy == "same" else args.eval_neg_strategy
+
+
+def safe_ratio_name(value: float) -> str:
+    return str(value).replace(".", "p")
+
+
+def fixed_negative_path(args: argparse.Namespace, species: str, split: str) -> Path:
+    strategy = eval_negative_strategy(args)
+    name = f"{split}_neg_{strategy}_r{safe_ratio_name(args.eval_neg_ratio)}_seed{args.seed}.pt"
+    return args.processed_dir / species / "fixed_negatives" / name
+
+
+def load_or_create_fixed_negatives(
+    species: str,
+    graph: GraphBundle,
+    split: str,
+    args: argparse.Namespace,
+    device: torch.device,
+) -> torch.Tensor:
+    path = fixed_negative_path(args, species, split)
+    if path.exists() and not args.refresh_fixed_negatives:
+        payload = torch.load(path, map_location="cpu", weights_only=False)
+        edge_index = payload["edge_index"] if isinstance(payload, dict) else payload
+        return edge_index.to(device=device, dtype=torch.long)
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    generator = generator_for(
+        device,
+        stable_seed(args.seed, "fixed_eval_negative", species, split, eval_negative_strategy(args), str(args.eval_neg_ratio)),
+    )
+    edge_index = sample_negative_edges(
+        graph.split_pos_edge_index[split],
+        graph.node_type,
+        graph.all_positive_edge_index,
+        neg_ratio=args.eval_neg_ratio,
+        strategy=eval_negative_strategy(args),
+        generator=generator,
+        node_sequences=graph.node_sequences,
+    )
+    torch.save(
+        {
+            "edge_index": edge_index.detach().cpu(),
+            "species": species,
+            "split": split,
+            "strategy": eval_negative_strategy(args),
+            "eval_neg_ratio": args.eval_neg_ratio,
+            "seed": args.seed,
+        },
+        path,
+    )
+    return edge_index
+
+
+def fixed_eval_negatives(
+    species: str,
+    graph: GraphBundle,
+    args: argparse.Namespace,
+    device: torch.device,
+) -> dict[str, torch.Tensor]:
+    if not args.fixed_eval_negatives:
+        return {}
+    return {
+        "val": load_or_create_fixed_negatives(species, graph, "val", args, device),
+        "test": load_or_create_fixed_negatives(species, graph, "test", args, device),
+    }
+
+
+def configure_finetune_parameters(model: GraphMMILinkPredictor, strategy: str) -> None:
+    for parameter in model.parameters():
+        parameter.requires_grad = True
+    if strategy == "full":
+        return
+    for parameter in model.input_encoder.parameters():
+        parameter.requires_grad = False
+    for parameter in model.gnn.parameters():
+        parameter.requires_grad = False
+    if strategy == "last_layer":
+        layers = getattr(model.gnn, "layers", None)
+        if layers is not None and len(layers) > 0:
+            for parameter in layers[-1].parameters():
+                parameter.requires_grad = True
+        norms = getattr(model.gnn, "norms", None)
+        if norms is not None and len(norms) > 0:
+            for parameter in norms[-1].parameters():
+                parameter.requires_grad = True
+    for parameter in model.decoder.parameters():
+        parameter.requires_grad = True
 
 
 def average_ranks(values: np.ndarray) -> np.ndarray:
@@ -333,16 +467,23 @@ def build_batch(
     seed: int,
     edge_attr_mode: str,
     device: torch.device,
+    neg_strategy: str,
+    fixed_neg_edge_index: torch.Tensor | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor | None]:
     generator = generator_for(device, seed)
     pos_edge_index = graph.split_pos_edge_index[split]
-    neg_edge_index = sample_negative_edges(
-        pos_edge_index,
-        graph.node_type,
-        graph.all_positive_edge_index,
-        neg_ratio=neg_ratio,
-        generator=generator,
-    )
+    if fixed_neg_edge_index is None:
+        neg_edge_index = sample_negative_edges(
+            pos_edge_index,
+            graph.node_type,
+            graph.all_positive_edge_index,
+            neg_ratio=neg_ratio,
+            strategy=neg_strategy,
+            generator=generator,
+            node_sequences=graph.node_sequences,
+        )
+    else:
+        neg_edge_index = fixed_neg_edge_index.to(device=pos_edge_index.device, dtype=torch.long)
     edge_label_index = torch.cat([pos_edge_index, neg_edge_index], dim=1)
     labels = torch.cat(
         [
@@ -368,6 +509,7 @@ def predict_split(
     args: argparse.Namespace,
     seed: int,
     device: torch.device,
+    fixed_neg_edge_index: torch.Tensor | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor, float]:
     model.eval()
     edge_label_index, labels, edge_attr = build_batch(
@@ -377,6 +519,8 @@ def predict_split(
         seed=seed,
         edge_attr_mode=args.edge_attr_mode,
         device=device,
+        neg_strategy=eval_negative_strategy(args) if split in {"val", "test"} else args.neg_strategy,
+        fixed_neg_edge_index=fixed_neg_edge_index,
     )
     logits = model(graph.x, graph.node_type, graph.species_id, graph.edge_index, edge_label_index, edge_attr)
     loss = F.binary_cross_entropy_with_logits(logits, labels)
@@ -392,8 +536,9 @@ def evaluate(
     seed: int,
     device: torch.device,
     threshold: float | None = None,
+    fixed_neg_edge_index: torch.Tensor | None = None,
 ) -> dict[str, float]:
-    labels, logits, loss = predict_split(model, graph, split, args, seed, device)
+    labels, logits, loss = predict_split(model, graph, split, args, seed, device, fixed_neg_edge_index=fixed_neg_edge_index)
     metrics = compute_metrics(labels, logits, args.threshold if threshold is None else threshold)
     metrics["loss"] = loss
     return metrics
@@ -406,8 +551,9 @@ def choose_threshold(
     args: argparse.Namespace,
     seed: int,
     device: torch.device,
+    fixed_neg_edge_index: torch.Tensor | None = None,
 ) -> tuple[float, dict[str, float]]:
-    labels, logits, loss = predict_split(model, graph, "val", args, seed, device)
+    labels, logits, loss = predict_split(model, graph, "val", args, seed, device, fixed_neg_edge_index=fixed_neg_edge_index)
     threshold, binary = select_best_threshold(labels, logits, args.threshold_metric, args.threshold)
     metrics = compute_metrics(labels, logits, threshold)
     metrics["loss"] = loss
@@ -430,8 +576,12 @@ def train_on_graph(
     seed: int,
     device: torch.device,
     phase: str,
+    eval_negatives: dict[str, torch.Tensor] | None = None,
 ) -> TrainResult:
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=args.weight_decay)
+    trainable_parameters = [parameter for parameter in model.parameters() if parameter.requires_grad]
+    if not trainable_parameters:
+        raise ValueError("No trainable parameters are left after applying the finetune strategy.")
+    optimizer = torch.optim.AdamW(trainable_parameters, lr=lr, weight_decay=args.weight_decay)
     best_state = clone_state_dict(model)
     best_epoch = 0
     best_val = {"aupr": -float("inf"), "auc": -float("inf")}
@@ -446,6 +596,7 @@ def train_on_graph(
             seed=stable_seed(seed, phase, species, str(epoch)),
             edge_attr_mode=args.edge_attr_mode,
             device=device,
+            neg_strategy=args.neg_strategy,
         )
         optimizer.zero_grad(set_to_none=True)
         logits = model(graph.x, graph.node_type, graph.species_id, graph.edge_index, edge_label_index, edge_attr)
@@ -461,6 +612,7 @@ def train_on_graph(
             args=args,
             seed=stable_seed(seed, phase, species, "val", str(epoch)),
             device=device,
+            fixed_neg_edge_index=(eval_negatives or {}).get("val"),
         )
         improved = val_metrics["aupr"] > best_val["aupr"]
         if improved:
@@ -489,6 +641,40 @@ def load_one_graph(species: str, args: argparse.Namespace, device: torch.device)
     return load_graph_bundle(path, device=device, load_edge_attr=args.keep_edge_attr_in_memory)
 
 
+@torch.no_grad()
+def threshold_for_setting(
+    model: GraphMMILinkPredictor,
+    graph: GraphBundle,
+    setting: str,
+    args: argparse.Namespace,
+    seed: int,
+    device: torch.device,
+    eval_negatives: dict[str, torch.Tensor],
+) -> tuple[float, dict[str, float]]:
+    if setting == "strict_zero_shot":
+        metrics = evaluate(
+            model,
+            graph,
+            "val",
+            args,
+            seed,
+            device,
+            threshold=args.threshold,
+            fixed_neg_edge_index=eval_negatives.get("val"),
+        )
+        metrics["threshold"] = args.threshold
+        metrics["selection_metric"] = "fixed"
+        return args.threshold, metrics
+    return choose_threshold(
+        model,
+        graph,
+        args,
+        seed,
+        device,
+        fixed_neg_edge_index=eval_negatives.get("val"),
+    )
+
+
 def _free_graph(graph: GraphBundle | None) -> None:
     """Move a graph bundle back to CPU so Python GC can reclaim GPU/RAM."""
     if graph is None:
@@ -507,6 +693,7 @@ def _free_graph(graph: GraphBundle | None) -> None:
 
 
 def result_row(
+    args: argparse.Namespace,
     encoder: str,
     setting: str,
     source: str,
@@ -524,6 +711,10 @@ def result_row(
         "source": source,
         "target": target,
         "phase": phase,
+        "train_neg_strategy": args.neg_strategy,
+        "eval_neg_strategy": eval_negative_strategy(args),
+        "fixed_eval_negatives": args.fixed_eval_negatives,
+        "finetune_strategy": args.finetune_strategy if setting == "finetune" else "",
         "source_best_epoch": source_train.best_epoch,
         "source_best_val_aupr": source_train.best_val_aupr,
         "source_best_val_auc": source_train.best_val_auc,
@@ -641,6 +832,7 @@ def run_experiments(args: argparse.Namespace, run_dir: Path) -> list[dict[str, A
             # --- source training (load one graph at a time) ---
             for source in args.species:
                 src_graph = load_one_graph(source, args, device)
+                src_eval_negatives = fixed_eval_negatives(source, src_graph, args, device)
                 set_seed(stable_seed(args.seed, encoder, setting, source, "source"))
                 model = build_model(args, encoder, setting, src_graph, device)
                 train_result = train_on_graph(
@@ -649,6 +841,7 @@ def run_experiments(args: argparse.Namespace, run_dir: Path) -> list[dict[str, A
                     epochs=args.epochs, patience=args.patience, lr=args.lr,
                     seed=stable_seed(args.seed, encoder, setting, source),
                     device=device, phase="source",
+                    eval_negatives=src_eval_negatives,
                 )
                 source_states[source] = clone_state_dict(train_result.model)
                 source_summaries[source] = train_summary(train_result)
@@ -656,7 +849,7 @@ def run_experiments(args: argparse.Namespace, run_dir: Path) -> list[dict[str, A
                     model_dir = run_dir / "models" / encoder / setting
                     model_dir.mkdir(parents=True, exist_ok=True)
                     torch.save(source_states[source], model_dir / f"{source}_source.pt")
-                del model, train_result
+                del model, train_result, src_eval_negatives
                 _free_graph(src_graph)
                 del src_graph
                 collect_memory(device)
@@ -665,26 +858,45 @@ def run_experiments(args: argparse.Namespace, run_dir: Path) -> list[dict[str, A
             for source in args.species:
                 for target in args.species:
                     tgt_graph = load_one_graph(target, args, device)
+                    tgt_eval_negatives = fixed_eval_negatives(target, tgt_graph, args, device)
                     eval_seed = stable_seed(args.seed, encoder, setting, source, target, "test")
-                    if setting == "zero_shot":
+                    if setting in ZERO_SHOT_SETTINGS:
                         model = build_model(args, encoder, setting, tgt_graph, device)
                         state = compatible_state_dict(source_states[source], model)
                         model.load_state_dict(state, strict=False)
-                        threshold, threshold_val_metrics = choose_threshold(
-                            model, tgt_graph, args,
+                        threshold, threshold_val_metrics = threshold_for_setting(
+                            model, tgt_graph,
+                            setting,
+                            args,
                             stable_seed(args.seed, encoder, setting, source, target, "threshold"),
                             device,
+                            tgt_eval_negatives,
                         )
-                        metrics = evaluate(model, tgt_graph, "test", args, eval_seed, device, threshold=threshold)
-                        rows.append(result_row(encoder, setting, source, target,
+                        metrics = evaluate(
+                            model,
+                            tgt_graph,
+                            "test",
+                            args,
+                            eval_seed,
+                            device,
+                            threshold=threshold,
+                            fixed_neg_edge_index=tgt_eval_negatives.get("test"),
+                        )
+                        rows.append(result_row(args, encoder, setting, source, target,
                             "zero_shot_eval", source_summaries[source], None,
                             metrics, threshold, threshold_val_metrics))
                         del model
                     else:
                         set_seed(stable_seed(args.seed, encoder, setting, source, target, "finetune"))
                         target_model = build_model(args, encoder, setting, tgt_graph, device)
-                        state = compatible_state_dict(source_states[source], target_model)
+                        skip_prefixes = (
+                            ("input_encoder.id_embedding", "input_encoder.species_embedding")
+                            if source != target
+                            else ()
+                        )
+                        state = compatible_state_dict(source_states[source], target_model, skip_prefixes=skip_prefixes)
                         target_model.load_state_dict(state, strict=False)
+                        configure_finetune_parameters(target_model, args.finetune_strategy)
                         target_train = train_on_graph(
                             args=args, model=target_model, graph=tgt_graph,
                             encoder=encoder, setting=setting,
@@ -693,14 +905,27 @@ def run_experiments(args: argparse.Namespace, run_dir: Path) -> list[dict[str, A
                             lr=args.finetune_lr,
                             seed=stable_seed(args.seed, encoder, setting, source, target),
                             device=device, phase="finetune",
+                            eval_negatives=tgt_eval_negatives,
                         )
-                        threshold, threshold_val_metrics = choose_threshold(
-                            target_train.model, tgt_graph, args,
+                        threshold, threshold_val_metrics = threshold_for_setting(
+                            target_train.model, tgt_graph,
+                            setting,
+                            args,
                             stable_seed(args.seed, encoder, setting, source, target, "threshold"),
                             device,
+                            tgt_eval_negatives,
                         )
-                        metrics = evaluate(target_train.model, tgt_graph, "test", args, eval_seed, device, threshold=threshold)
-                        rows.append(result_row(encoder, setting, source, target,
+                        metrics = evaluate(
+                            target_train.model,
+                            tgt_graph,
+                            "test",
+                            args,
+                            eval_seed,
+                            device,
+                            threshold=threshold,
+                            fixed_neg_edge_index=tgt_eval_negatives.get("test"),
+                        )
+                        rows.append(result_row(args, encoder, setting, source, target,
                             "finetune_eval", source_summaries[source], target_train,
                             metrics, threshold, threshold_val_metrics))
                         del target_model, target_train
@@ -711,6 +936,7 @@ def run_experiments(args: argparse.Namespace, run_dir: Path) -> list[dict[str, A
                         f"thr={rows[-1]['selected_threshold']:.4f}"
                     )
                     # Free target graph after each evaluation pair
+                    del tgt_eval_negatives
                     _free_graph(tgt_graph)
                     del tgt_graph
                     collect_memory(device)

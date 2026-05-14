@@ -65,8 +65,9 @@ Smoke test:
 conda run -n mti39 python scripts/train_gnn_transfer.py \
   --species worm cow \
   --encoders graphsage \
-  --settings zero_shot \
+  --settings strict_zero_shot calibrated_zero_shot finetune \
   --epochs 1 \
+  --finetune-epochs 1 \
   --neg-ratio 0.2 \
   --eval-neg-ratio 0.2 \
   --run-root runs/gnn_transfer_smoke
@@ -78,10 +79,28 @@ Full default experiment:
 conda run -n mti39 python scripts/train_gnn_transfer.py
 ```
 
-The default training mode now uses `--edge-attr-mode pair`, which computes the
-same lightweight pair features for positive and dynamic negative edges. It also
-selects the classification threshold on the target validation split before
-reporting test ACC/F1/MCC.
+The default training mode uses dynamic training negatives and fixed validation /
+test negatives. Fixed negatives are cached per target species under
+`data/processed/graph/random/<species>/fixed_negatives/`, so all source models,
+encoders, and transfer settings evaluate against the same target negative set.
+
+Useful switches:
+
+```text
+--neg-strategy random|degree_aware|sequence_aware
+--eval-neg-strategy same|random|degree_aware|sequence_aware
+--fixed-eval-negatives / --no-fixed-eval-negatives
+--refresh-fixed-negatives
+--finetune-strategy full|last_layer|decoder
+--residual --layer-norm --decoder-layer-norm
+```
+
+`strict_zero_shot` uses the fixed threshold, `calibrated_zero_shot` selects the
+threshold on the target validation split without updating model parameters, and
+`finetune` updates target parameters before selecting the threshold.
+
+The default `--edge-attr-mode pair` computes the same lightweight pair features
+for positive and sampled negative edges before the decoder.
 
 Outputs:
 
@@ -114,13 +133,13 @@ For the later transfer-learning figures, keep the baseline-style source-target
 matrix over `human/cow/mouse/worm`, then repeat it for:
 
 - encoder: `GraphSAGE` / `GATv2`
-- transfer setting: `sequence-only zero-shot` / `ID-embedding with target fine-tune`
+- transfer setting: `strict zero-shot` / `calibrated zero-shot` / `target fine-tune`
 - metric: `AUC`, `AUPR`, `ACC`, `F1`, `MCC`
 
-This gives the planned `2 * 2 * 5` comparison group. For strict zero-shot
-cross-species transfer, set `id_embedding_dim=0`, because local node IDs are not
-biologically aligned across species. Use trainable ID embeddings only for
-within-species experiments or an explicitly fine-tuned transfer setting.
+For strict zero-shot cross-species transfer, local node IDs are disabled because
+they are not biologically aligned across species. During cross-species fine-tune,
+ID/species embeddings are not loaded from the source state even if their tensor
+shapes happen to match.
 
 ## Edge Attributes
 

@@ -60,15 +60,30 @@ class MeanSAGELayer(nn.Module):
 
 
 class GraphSAGEEncoder(nn.Module):
-    def __init__(self, hidden_dim: int = 128, num_layers: int = 2, dropout: float = 0.3) -> None:
+    def __init__(
+        self,
+        hidden_dim: int = 128,
+        num_layers: int = 2,
+        dropout: float = 0.3,
+        residual: bool = False,
+        layer_norm: bool = False,
+    ) -> None:
         super().__init__()
         self.layers = nn.ModuleList([MeanSAGELayer(hidden_dim, hidden_dim) for _ in range(num_layers)])
+        self.norms = nn.ModuleList([nn.LayerNorm(hidden_dim) for _ in range(num_layers)])
         self.dropout = dropout
+        self.residual = residual
+        self.layer_norm = layer_norm
 
     def forward(self, x: Tensor, edge_index: Tensor) -> Tensor:
         h = x
         for layer_idx, layer in enumerate(self.layers):
+            h_in = h
             h = layer(h, edge_index)
+            if self.layer_norm:
+                h = self.norms[layer_idx](h)
+            if self.residual:
+                h = h_in + h
             if layer_idx != len(self.layers) - 1:
                 h = F.relu(h)
                 h = F.dropout(h, p=self.dropout, training=self.training)
@@ -133,9 +148,12 @@ class GATv2Encoder(nn.Module):
         heads: int = 2,
         dropout: float = 0.3,
         concat: bool = False,
+        residual: bool = False,
+        layer_norm: bool = False,
     ) -> None:
         super().__init__()
         self.layers = nn.ModuleList()
+        self.norms = nn.ModuleList()
         for _ in range(num_layers):
             layer_out = hidden_dim // heads if concat else hidden_dim
             self.layers.append(
@@ -147,12 +165,20 @@ class GATv2Encoder(nn.Module):
                     dropout=dropout,
                 )
             )
+            self.norms.append(nn.LayerNorm(hidden_dim))
         self.dropout = dropout
+        self.residual = residual
+        self.layer_norm = layer_norm
 
     def forward(self, x: Tensor, edge_index: Tensor) -> Tensor:
         h = x
         for layer_idx, layer in enumerate(self.layers):
+            h_in = h
             h = layer(h, edge_index)
+            if self.layer_norm:
+                h = self.norms[layer_idx](h)
+            if self.residual:
+                h = h_in + h
             if layer_idx != len(self.layers) - 1:
                 h = F.elu(h)
                 h = F.dropout(h, p=self.dropout, training=self.training)
@@ -160,17 +186,28 @@ class GATv2Encoder(nn.Module):
 
 
 class LinkDecoder(nn.Module):
-    def __init__(self, hidden_dim: int = 128, edge_attr_dim: int = 0, decoder_hidden_dim: int = 256, dropout: float = 0.3) -> None:
+    def __init__(
+        self,
+        hidden_dim: int = 128,
+        edge_attr_dim: int = 0,
+        decoder_hidden_dim: int = 256,
+        dropout: float = 0.3,
+        layer_norm: bool = False,
+    ) -> None:
         super().__init__()
         input_dim = hidden_dim * 4 + edge_attr_dim
         self.edge_attr_dim = edge_attr_dim
+        first_block: list[nn.Module] = [nn.Linear(input_dim, decoder_hidden_dim)]
+        if layer_norm:
+            first_block.append(nn.LayerNorm(decoder_hidden_dim))
+        first_block.extend([nn.ReLU(), nn.Dropout(dropout)])
+        second_block: list[nn.Module] = [nn.Linear(decoder_hidden_dim, decoder_hidden_dim // 2)]
+        if layer_norm:
+            second_block.append(nn.LayerNorm(decoder_hidden_dim // 2))
+        second_block.extend([nn.ReLU(), nn.Dropout(dropout)])
         self.mlp = nn.Sequential(
-            nn.Linear(input_dim, decoder_hidden_dim),
-            nn.ReLU(),
-            nn.Dropout(dropout),
-            nn.Linear(decoder_hidden_dim, decoder_hidden_dim // 2),
-            nn.ReLU(),
-            nn.Dropout(dropout),
+            *first_block,
+            *second_block,
             nn.Linear(decoder_hidden_dim // 2, 1),
         )
 
@@ -203,6 +240,9 @@ class GraphMMILinkPredictor(nn.Module):
         id_embedding_dim: int = 32,
         type_embedding_dim: int = 8,
         species_embedding_dim: int = 8,
+        residual: bool = False,
+        layer_norm: bool = False,
+        decoder_layer_norm: bool = False,
     ) -> None:
         super().__init__()
         self.input_encoder = NodeInputEncoder(
@@ -215,7 +255,13 @@ class GraphMMILinkPredictor(nn.Module):
             dropout=dropout,
         )
         if encoder_name.lower() == "graphsage":
-            self.gnn = GraphSAGEEncoder(hidden_dim=hidden_dim, num_layers=num_layers, dropout=dropout)
+            self.gnn = GraphSAGEEncoder(
+                hidden_dim=hidden_dim,
+                num_layers=num_layers,
+                dropout=dropout,
+                residual=residual,
+                layer_norm=layer_norm,
+            )
         elif encoder_name.lower() == "gatv2":
             self.gnn = GATv2Encoder(
                 hidden_dim=hidden_dim,
@@ -223,10 +269,17 @@ class GraphMMILinkPredictor(nn.Module):
                 heads=gat_heads,
                 dropout=dropout,
                 concat=gat_concat,
+                residual=residual,
+                layer_norm=layer_norm,
             )
         else:
             raise ValueError(f"Unknown encoder_name: {encoder_name}")
-        self.decoder = LinkDecoder(hidden_dim=hidden_dim, edge_attr_dim=edge_attr_dim, dropout=dropout)
+        self.decoder = LinkDecoder(
+            hidden_dim=hidden_dim,
+            edge_attr_dim=edge_attr_dim,
+            dropout=dropout,
+            layer_norm=decoder_layer_norm,
+        )
 
     def encode(self, x: Tensor, node_type: Tensor, species_id: Tensor, edge_index: Tensor) -> Tensor:
         h0 = self.input_encoder(x, node_type, species_id)
