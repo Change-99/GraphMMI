@@ -289,6 +289,127 @@ def pair_feature_dim() -> int:
     return int(len(PAIR_FEATURE_NAMES))
 
 
+PAIR_FEATURE_NAMES_V2 = np.asarray(
+    PAIR_FEATURE_NAMES.tolist() + [
+        # complement richness
+        "pair_longest_complement",
+        "pair_total_complement",
+        "pair_complement_density",
+        # nucleotide composition similarity
+        "pair_mono_cosine",
+        # seed AU richness
+        "pair_seed_2_7_au",
+        "pair_seed_3_8_au",
+        # length raw
+        "pair_mirna_len",
+        "pair_mrna_len",
+        "pair_len_ratio_raw",
+        # miRNA seed match position in mRNA
+        "pair_seed_2_7_first_pos",
+        "pair_seed_3_8_first_pos",
+    ],
+    dtype=str,
+)
+
+
+def pair_feature_dim_v2() -> int:
+    return int(len(PAIR_FEATURE_NAMES_V2))
+
+
+def _complement_match(mirna: str, mrna: str) -> tuple[str, str]:
+    """Return the reverse-complement of mirna, and the cleaned mrna."""
+    rc = reverse_complement(mirna)
+    return rc, mrna
+
+
+def _longest_complement(rc: str, mrna: str) -> int:
+    """Longest contiguous exact complement match between miRNA rc and mRNA.
+
+    Scans descending window sizes; early-exits on first hit (the longest).
+    mRNA is truncated to 2000 nt — miRNA binding is local, longer scans
+    add negligible signal while dominating runtime.
+    """
+    if not rc or not mrna:
+        return 0
+    mrna = mrna[:2000]
+    for w in range(len(rc), 0, -1):
+        for i in range(len(rc) - w + 1):
+            if rc[i:i + w] in mrna:
+                return w
+    return 0
+
+
+def _total_complement(rc: str, mrna: str) -> int:
+    """Count positions where the complementary base exists anywhere in mRNA."""
+    comp = {"A": "U", "U": "A", "C": "G", "G": "C"}
+    mrna_set = set(mrna[:2000])
+    return sum(1 for b in rc if b in comp and comp[b] in mrna_set)
+
+
+def _first_seed_position(seed_rc: str, mrna: str) -> float:
+    """Fractional position of first seed match in mRNA (0=start, 1=end)."""
+    if not seed_rc or not mrna:
+        return -1.0
+    idx = mrna.find(seed_rc)
+    if idx < 0:
+        return -1.0
+    return float(idx / max(len(mrna) - len(seed_rc), 1))
+
+
+def _mono_cosine(seq1: str, seq2: str) -> float:
+    """Cosine similarity of mononucleotide frequency vectors."""
+    import numpy as np
+    bases = ["A", "C", "G", "U"]
+    v1 = np.array([seq1.count(b) / max(len(seq1), 1) for b in bases], dtype=np.float64)
+    v2 = np.array([seq2.count(b) / max(len(seq2), 1) for b in bases], dtype=np.float64)
+    n1, n2 = np.linalg.norm(v1), np.linalg.norm(v2)
+    if n1 < 1e-12 or n2 < 1e-12:
+        return 0.0
+    return float(np.dot(v1, v2) / (n1 * n2))
+
+
+def pair_feature_row_v2(src: int, dst: int, sequences: np.ndarray) -> np.ndarray:
+    """Richer pair features: v1 baseline + complement, position, composition."""
+    v1 = pair_feature_row(src, dst, sequences)
+    mirna_seq = str(sequences[int(src)]).upper().replace("T", "U")
+    mrna_seq = str(sequences[int(dst)]).upper().replace("T", "U")
+    rc = reverse_complement(mirna_seq)
+    mirna_len = max(len(mirna_seq), 1)
+    mrna_len = max(len(mrna_seq), 1)
+
+    longest = float(_longest_complement(rc, mrna_seq))
+    total = float(_total_complement(rc, mrna_seq))
+    density = total / float(mirna_len)
+    mono_cos = _mono_cosine(mirna_seq, mrna_seq)
+
+    seed_2_7_rc = reverse_complement(mirna_seq[1:7])
+    seed_3_8_rc = reverse_complement(mirna_seq[2:8])
+
+    # AU richness of seed regions
+    au_27 = float(seed_2_7_rc.count("A") + seed_2_7_rc.count("U")) / max(len(seed_2_7_rc), 1)
+    au_38 = float(seed_3_8_rc.count("A") + seed_3_8_rc.count("U")) / max(len(seed_3_8_rc), 1)
+
+    # seed match position
+    pos_27 = _first_seed_position(seed_2_7_rc, mrna_seq)
+    pos_38 = _first_seed_position(seed_3_8_rc, mrna_seq)
+
+    extra = np.asarray([
+        longest,
+        total,
+        density,
+        mono_cos,
+        au_27,
+        au_38,
+        float(mirna_len),
+        float(mrna_len),
+        float(mirna_len) / float(mrna_len),
+        pos_27,
+        pos_38,
+    ], dtype=np.float32)
+
+    return np.concatenate([v1, extra])
+
+
 def reverse_complement(seq: str) -> str:
     return str(seq).upper().replace("T", "U").translate(_COMPLEMENT)[::-1]
 
@@ -350,24 +471,28 @@ def pair_feature_row(src: int, dst: int, sequences: np.ndarray) -> np.ndarray:
     )
 
 
-def pair_feature_matrix(edge_index: Tensor, graph: GraphBundle) -> Tensor:
+def pair_feature_matrix(edge_index: Tensor, graph: GraphBundle, version: str = "v1") -> Tensor:
     """Compute label-safe pair features for positive and dynamic negative edges.
 
     These features use only the two endpoint sequences, so they are available for
     every candidate miRNA-mRNA pair and do not encode whether a pair was observed.
     """
+    dim = pair_feature_dim_v2() if version == "v2" else pair_feature_dim()
     if edge_index.numel() == 0:
-        return torch.empty((0, pair_feature_dim()), dtype=torch.float32, device=edge_index.device)
+        return torch.empty((0, dim), dtype=torch.float32, device=edge_index.device)
 
     pairs = edge_index.detach().cpu().numpy().T
     sequences = np.asarray(graph.node_sequences).astype(str)
-    rows = np.empty((pairs.shape[0], pair_feature_dim()), dtype=np.float32)
+    rows = np.empty((pairs.shape[0], dim), dtype=np.float32)
     cache = graph.pair_feature_cache
     for row_idx, (src, dst) in enumerate(pairs):
         key = (int(src), int(dst))
         features = cache.get(key)
         if features is None:
-            features = pair_feature_row(key[0], key[1], sequences)
+            if version == "v2":
+                features = pair_feature_row_v2(key[0], key[1], sequences)
+            else:
+                features = pair_feature_row(key[0], key[1], sequences)
             cache[key] = features
         rows[row_idx] = features
     return torch.as_tensor(rows, dtype=torch.float32, device=edge_index.device)

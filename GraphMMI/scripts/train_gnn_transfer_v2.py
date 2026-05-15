@@ -27,7 +27,7 @@ from torch import Tensor
 import torch.nn.functional as F
 
 sys.path.insert(0, str(ROOT / "src"))
-from graphmmi import GraphMMILinkPredictor, load_graph_bundle, pair_feature_dim, pair_feature_matrix, sample_negative_edges
+from graphmmi import GraphMMILinkPredictor, load_graph_bundle, pair_feature_dim_v2, pair_feature_matrix, sample_negative_edges
 from graphmmi.data import GraphBundle, positive_pair_set
 
 
@@ -229,7 +229,7 @@ def build_model(
     device: torch.device,
 ) -> GraphMMILinkPredictor:
     id_dim, species_dim = embedding_dims_for_setting(args, setting)
-    edge_attr_dim = pair_feature_dim() if args.edge_attr_mode == "pair" else 0
+    edge_attr_dim = pair_feature_dim_v2() if args.edge_attr_mode == "pair" else 0
     use_edge_weight = (encoder == "gatv2") and (args.mirna_sim_edges or args.mrna_sim_edges)
     return GraphMMILinkPredictor(
         encoder_name=encoder,
@@ -548,7 +548,7 @@ def build_batch(
         ],
         dim=0,
     )
-    edge_attr = pair_feature_matrix(edge_label_index, graph) if edge_attr_mode == "pair" else None
+    edge_attr = pair_feature_matrix(edge_label_index, graph, version="v2") if edge_attr_mode == "pair" else None
     order = torch.randperm(labels.numel(), device=labels.device)
     edge_label_index = edge_label_index[:, order]
     labels = labels[order]
