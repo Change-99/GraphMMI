@@ -1,0 +1,53 @@
+{
+  "processed_dir": "/mnt/d/Projects/GProject/GraphMMI/data/processed/graph/random",
+  "run_root": "/mnt/d/Projects/GProject/GraphMMI/exp/exp2/C_gatv2_deep_fix/result",
+  "species": [
+    "human"
+  ],
+  "encoders": [
+    "gatv2"
+  ],
+  "settings": [
+    "zero_shot"
+  ],
+  "seed": 42,
+  "device": "cpu",
+  "epochs": 30,
+  "finetune_epochs": 15,
+  "patience": 8,
+  "finetune_patience": 5,
+  "lr": 0.001,
+  "finetune_lr": 0.0005,
+  "weight_decay": 0.0001,
+  "neg_strategy": "endpoint_corrupt",
+  "eval_neg_strategy": "same",
+  "neg_ratio": 1.0,
+  "eval_neg_ratio": 1.0,
+  "fixed_eval_negatives": true,
+  "refresh_fixed_negatives": false,
+  "threshold": 0.5,
+  "threshold_metric": "mcc",
+  "finetune_strategy": "full",
+  "graphsage_hidden_dim": 128,
+  "gatv2_hidden_dim": 64,
+  "num_layers": 3,
+  "dropout": 0.5,
+  "residual": true,
+  "layer_norm": true,
+  "decoder_layer_norm": false,
+  "gat_heads": 2,
+  "gat_concat": false,
+  "id_embedding_dim": 32,
+  "type_embedding_dim": 8,
+  "species_embedding_dim": 8,
+  "save_models": false,
+  "skip_preprocess": false,
+  "keep_edge_attr_in_memory": false,
+  "edge_attr_mode": "pair",
+  "use_edge_attr": false,
+  "mirna_sim_edges": true,
+  "mrna_sim_edges": false,
+  "mirna_sim_topk": 5,
+  "mrna_sim_topk": 5,
+  "no_heatmaps": true
+}

@@ -300,10 +300,10 @@ PAIR_FEATURE_NAMES_V2 = np.asarray(
         # seed AU richness
         "pair_seed_2_7_au",
         "pair_seed_3_8_au",
-        # length raw
-        "pair_mirna_len",
-        "pair_mrna_len",
-        "pair_len_ratio_raw",
+        # length log (safe scale)
+        "pair_mirna_log_len_v2",
+        "pair_mrna_log_len_v2",
+        "pair_log_len_ratio_v2",
         # miRNA seed match position in mRNA
         "pair_seed_2_7_first_pos",
         "pair_seed_3_8_first_pos",
@@ -400,9 +400,9 @@ def pair_feature_row_v2(src: int, dst: int, sequences: np.ndarray) -> np.ndarray
         mono_cos,
         au_27,
         au_38,
-        float(mirna_len),
-        float(mrna_len),
-        float(mirna_len) / float(mrna_len),
+        np.log1p(mirna_len),
+        np.log1p(mrna_len),
+        np.log1p(mirna_len) / max(np.log1p(mrna_len), 1e-6),
         pos_27,
         pos_38,
     ], dtype=np.float32)

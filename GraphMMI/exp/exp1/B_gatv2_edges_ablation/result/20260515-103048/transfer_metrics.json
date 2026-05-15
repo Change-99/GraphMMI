@@ -1,0 +1,32 @@
+[
+  {
+    "encoder": "gatv2",
+    "setting": "zero_shot",
+    "source": "human",
+    "target": "human",
+    "phase": "zero_shot_eval",
+    "train_neg_strategy": "endpoint_corrupt",
+    "eval_neg_strategy": "endpoint_corrupt",
+    "fixed_eval_negatives": true,
+    "finetune_strategy": "",
+    "source_best_epoch": 16,
+    "source_best_val_aupr": 0.6299709961083808,
+    "source_best_val_auc": 0.6648900700082027,
+    "target_best_epoch": 0,
+    "target_best_val_aupr": null,
+    "target_best_val_auc": null,
+    "selected_threshold": 0.5613527297973633,
+    "threshold_metric": "mcc",
+    "threshold_val_auc": 0.6648900700082027,
+    "threshold_val_aupr": 0.6299709961083808,
+    "threshold_val_acc": 0.6255259467040674,
+    "threshold_val_f1": 0.6790865384615384,
+    "threshold_val_mcc": 0.2663274725822629,
+    "auc": 0.6598932963504606,
+    "aupr": 0.6374178120610725,
+    "acc": 0.6035353535353535,
+    "f1": 0.6589427950760319,
+    "mcc": 0.21895030724074355,
+    "loss": 0.6761284470558167
+  }
+]

@@ -1,0 +1,4 @@
+[graphsage/zero_shot/source/human] epoch=001 loss=0.6933 val_aupr=0.6058 val_auc=0.6096
+[graphsage/zero_shot/source/human] epoch=002 loss=0.6903 val_aupr=0.6177 val_auc=0.6158
+[RESULT] graphsage/zero_shot human->human AUC=0.5920 AUPR=0.5801 F1=0.4158 MCC=0.1359 thr=0.5147
+Saved GNN transfer run to: /mnt/d/Projects/GProject/GraphMMI/exp/exp1/A_graphsage_edges_ablation/result/20260515-101948

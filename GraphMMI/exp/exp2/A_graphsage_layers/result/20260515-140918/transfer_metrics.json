@@ -1,0 +1,32 @@
+[
+  {
+    "encoder": "graphsage",
+    "setting": "zero_shot",
+    "source": "human",
+    "target": "human",
+    "phase": "zero_shot_eval",
+    "train_neg_strategy": "endpoint_corrupt",
+    "eval_neg_strategy": "endpoint_corrupt",
+    "fixed_eval_negatives": true,
+    "finetune_strategy": "",
+    "source_best_epoch": 2,
+    "source_best_val_aupr": 0.6635362259200936,
+    "source_best_val_auc": 0.6878055113510069,
+    "target_best_epoch": 0,
+    "target_best_val_aupr": null,
+    "target_best_val_auc": null,
+    "selected_threshold": 0.5055719017982483,
+    "threshold_metric": "mcc",
+    "threshold_val_auc": 0.6878055113510069,
+    "threshold_val_aupr": 0.6635362259200936,
+    "threshold_val_acc": 0.6325385694249649,
+    "threshold_val_f1": 0.6985040276179517,
+    "threshold_val_mcc": 0.29480013981985814,
+    "auc": 0.6666843015514919,
+    "aupr": 0.6469227737314379,
+    "acc": 0.6099887766554434,
+    "f1": 0.682067703568161,
+    "mcc": 0.24680656436839005,
+    "loss": 0.6856404542922974
+  }
+]

@@ -1,0 +1,13 @@
+[gatv2/zero_shot/source/human] epoch=001 loss=0.6936 val_aupr=0.5839 val_auc=0.6090
+[gatv2/zero_shot/source/human] epoch=002 loss=0.6924 val_aupr=0.5973 val_auc=0.6277
+[gatv2/zero_shot/source/human] epoch=003 loss=0.6910 val_aupr=0.6124 val_auc=0.6451
+[gatv2/zero_shot/source/human] epoch=004 loss=0.6888 val_aupr=0.6370 val_auc=0.6611
+[gatv2/zero_shot/source/human] epoch=005 loss=0.6871 val_aupr=0.6604 val_auc=0.6728
+[gatv2/zero_shot/source/human] epoch=006 loss=0.6848 val_aupr=0.6694 val_auc=0.6778
+[gatv2/zero_shot/source/human] epoch=007 loss=0.6826 val_aupr=0.6761 val_auc=0.6873
+[gatv2/zero_shot/source/human] epoch=008 loss=0.6789 val_aupr=0.6827 val_auc=0.6981
+[gatv2/zero_shot/source/human] epoch=009 loss=0.6761 val_aupr=0.6889 val_auc=0.7077
+[gatv2/zero_shot/source/human] epoch=010 loss=0.6691 val_aupr=0.6947 val_auc=0.7153
+[gatv2/zero_shot/source/human] epoch=011 loss=0.6656 val_aupr=0.6980 val_auc=0.7198
+[RESULT] gatv2/zero_shot human->human AUC=0.7064 AUPR=0.6781 F1=0.6468 MCC=0.3008 thr=0.5265
+Saved GNN transfer run to: /mnt/d/Projects/GProject/GraphMMI/exp/exp1/B_gatv2_edges_ablation/result/20260515-102905
