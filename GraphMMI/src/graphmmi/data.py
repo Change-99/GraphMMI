@@ -471,13 +471,216 @@ def pair_feature_row(src: int, dst: int, sequences: np.ndarray) -> np.ndarray:
     )
 
 
+PAIR_FEATURE_NAMES_V3 = np.asarray(
+    PAIR_FEATURE_NAMES_V2.tolist() + [
+        # detailed binding-site match (v3)
+        "pair_gu_wobble_count",
+        "pair_total_mismatch_count",
+        "pair_seed_27_mismatch",
+        "pair_seed_38_mismatch",
+        "pair_seed_exact_any",
+        "pair_target_local_gc",
+        "pair_kmer_overlap_3mer",
+        "pair_seed_2_8_sliding_match",
+        "pair_target_seq_len",
+        "pair_target_seq_log_len",
+        "pair_seed_27_gu_wobble",
+        "pair_seed_38_gu_wobble",
+    ],
+    dtype=str,
+)
+
+
+def pair_feature_dim_v3() -> int:
+    return int(len(PAIR_FEATURE_NAMES_V3))  # 40
+
+
+def _count_gu_wobble_v3(mirna_seq: str, mrna_seq: str) -> int:
+    """Count G-U wobble pairs when aligning miRNA rc to mRNA."""
+    rc = reverse_complement(mirna_seq)
+    min_len = min(len(rc), len(mrna_seq))
+    wobble = 0
+    for i in range(min_len):
+        b_rc = rc[i]
+        b_mrna = mrna_seq[i]
+        if (b_rc == "G" and b_mrna == "U") or (b_rc == "U" and b_mrna == "G"):
+            wobble += 1
+    return wobble
+
+
+def _count_mismatch_v3(mirna_seq: str, mrna_seq: str) -> int:
+    """Count mismatches (non-WC, non-GU) in aligned region.
+
+    rc = reverse_complement(miRNA).  For perfect WC pairing, rc[i] == mrna[i].
+    """
+    rc = reverse_complement(mirna_seq)
+    min_len = min(len(rc), len(mrna_seq))
+    mism = 0
+    for i in range(min_len):
+        b_rc = rc[i]
+        b_mrna = mrna_seq[i]
+        is_wc = (b_rc == b_mrna)
+        is_gu = (b_rc == "G" and b_mrna == "U") or (b_rc == "U" and b_mrna == "G")
+        if not is_wc and not is_gu:
+            mism += 1
+    return mism
+
+
+def _seed_mismatch_v3(mirna_seq: str, mrna_seq: str, seed_slice: slice) -> int:
+    """Count mismatches in a seed region, aligned at its best-match position."""
+    rc = reverse_complement(mirna_seq)
+    seed_rc = rc[seed_slice] if len(rc) >= seed_slice.stop else ""
+    if not seed_rc:
+        return 0
+    offset = mrna_seq.find(seed_rc)
+    if offset < 0:
+        offset = 0
+    mism = 0
+    for i, b in enumerate(seed_rc):
+        mrna_pos = offset + i
+        if mrna_pos >= len(mrna_seq):
+            mism += 1
+            continue
+        b_mrna = mrna_seq[mrna_pos]
+        is_wc = (b == b_mrna)
+        is_gu = (b == "G" and b_mrna == "U") or (b == "U" and b_mrna == "G")
+        if not is_wc and not is_gu:
+            mism += 1
+    return mism
+
+
+def _local_gc_v3(seq: str, window: int = 20) -> float:
+    """Maximum local GC content in sliding windows."""
+    if len(seq) < window:
+        return gc_fraction(seq)
+    max_gc = 0.0
+    for i in range(len(seq) - window + 1):
+        gc = gc_fraction(seq[i:i + window])
+        if gc > max_gc:
+            max_gc = gc
+    return max_gc
+
+
+def _kmer_overlap_3mer_v3(mirna_seq: str, mrna_seq: str) -> float:
+    """Jaccard overlap of 3-mer sets between miRNA rc and mRNA."""
+    rc = reverse_complement(mirna_seq)
+    if len(rc) < 3 or len(mrna_seq) < 3:
+        return 0.0
+    BASES_SET = {"A", "C", "G", "U"}
+
+    def kmer_set(seq, k=3):
+        return {seq[i:i + k] for i in range(len(seq) - k + 1)
+                if all(b in BASES_SET for b in seq[i:i + k])}
+
+    rc_set = kmer_set(rc)
+    mrna_set = kmer_set(mrna_seq)
+    union = len(rc_set | mrna_set)
+    if union == 0:
+        return 0.0
+    return float(len(rc_set & mrna_set) / union)
+
+
+def _seed_2_8_sliding_match_v3(mirna_seq: str, mrna_seq: str,
+                               window: int = 7) -> float:
+    """Max fraction of seed_2_8 rc bases matching in sliding windows of mRNA."""
+    rc = reverse_complement(mirna_seq)
+    seed_rc = rc[1:8] if len(rc) >= 8 else rc
+    if len(seed_rc) < window:
+        return 0.0
+    max_match = 0.0
+    for start in range(max(len(mrna_seq) - window + 1, 1)):
+        window_mrna = mrna_seq[start:start + window]
+        matches = 0
+        for i in range(min(window, len(seed_rc))):
+            if i < len(window_mrna) and seed_rc[i] == window_mrna[i]:
+                matches += 1
+        match_frac = matches / window
+        if match_frac > max_match:
+            max_match = match_frac
+    return max_match
+
+
+def pair_feature_row_v3(src: int, dst: int, sequences: np.ndarray) -> np.ndarray:
+    """Compute full v3 pair features (40 dims) for a miRNA–target/mRNA pair."""
+    mirna_seq = str(sequences[int(src)]).upper().replace("T", "U")
+    mrna_seq = str(sequences[int(dst)]).upper().replace("T", "U")
+    rc = reverse_complement(mirna_seq)
+    mirna_len = max(len(mirna_seq), 1)
+    mrna_len = max(len(mrna_seq), 1)
+
+    # ---- v1 (17 dims) ----
+    mirna_log_len = float(np.log1p(mirna_len))
+    mrna_log_len = float(np.log1p(mrna_len))
+    mirna_gc_val = gc_fraction(mirna_seq)
+    mrna_gc_val = gc_fraction(mrna_seq)
+
+    seed_2_7 = reverse_complement(mirna_seq[1:7])
+    seed_3_8 = reverse_complement(mirna_seq[2:8])
+    seed_2_8 = reverse_complement(mirna_seq[1:8])
+    seed_patterns = [seed_2_7, seed_3_8, seed_2_8]
+    counts = [normalized_substring_count(seed, mrna_seq) for seed in seed_patterns]
+    exact = [1.0 if count > 0.0 else 0.0 for count in counts]
+    seed_gc_vals = [gc_fraction(s) for s in [mirna_seq[1:7], mirna_seq[2:8], mirna_seq[1:8]]]
+
+    v1 = np.asarray([
+        mirna_log_len, mrna_log_len,
+        mirna_log_len / max(mrna_log_len, 1e-6),
+        abs(mirna_log_len - mrna_log_len),
+        mirna_gc_val, mrna_gc_val,
+        abs(mirna_gc_val - mrna_gc_val),
+        mirna_gc_val * mrna_gc_val,
+        *exact, *counts, *seed_gc_vals,
+    ], dtype=np.float32)
+
+    # ---- v2 (11 dims) ----
+    longest = float(_longest_complement(rc, mrna_seq))
+    total = float(_total_complement(rc, mrna_seq))
+    density = total / float(mirna_len)
+    mono_cos = _mono_cosine(mirna_seq, mrna_seq)
+    au_27 = float(seed_2_7.count("A") + seed_2_7.count("U")) / max(len(seed_2_7), 1)
+    au_38 = float(seed_3_8.count("A") + seed_3_8.count("U")) / max(len(seed_3_8), 1)
+    pos_27 = _first_seed_position(seed_2_7, mrna_seq)
+    pos_38 = _first_seed_position(seed_3_8, mrna_seq)
+
+    v2 = np.asarray([
+        longest, total, density, mono_cos,
+        au_27, au_38,
+        np.log1p(mirna_len), np.log1p(mrna_len),
+        np.log1p(mirna_len) / max(np.log1p(mrna_len), 1e-6),
+        pos_27, pos_38,
+    ], dtype=np.float32)
+
+    # ---- v3 (12 dims) ----
+    v3 = np.asarray([
+        float(_count_gu_wobble_v3(mirna_seq, mrna_seq)),
+        float(_count_mismatch_v3(mirna_seq, mrna_seq)),
+        float(_seed_mismatch_v3(mirna_seq, mrna_seq, slice(1, 7))),
+        float(_seed_mismatch_v3(mirna_seq, mrna_seq, slice(2, 8))),
+        float(max(exact)),  # pair_seed_exact_any
+        float(_local_gc_v3(mrna_seq)),
+        float(_kmer_overlap_3mer_v3(mirna_seq, mrna_seq)),
+        float(_seed_2_8_sliding_match_v3(mirna_seq, mrna_seq)),
+        float(mrna_len),
+        float(np.log1p(mrna_len)),
+        float(_count_gu_wobble_v3(mirna_seq[1:7], mrna_seq[:6])),
+        float(_count_gu_wobble_v3(mirna_seq[2:8], mrna_seq[:6])),
+    ], dtype=np.float32)
+
+    return np.concatenate([v1, v2, v3])
+
+
 def pair_feature_matrix(edge_index: Tensor, graph: GraphBundle, version: str = "v1") -> Tensor:
     """Compute label-safe pair features for positive and dynamic negative edges.
 
     These features use only the two endpoint sequences, so they are available for
     every candidate miRNA-mRNA pair and do not encode whether a pair was observed.
     """
-    dim = pair_feature_dim_v2() if version == "v2" else pair_feature_dim()
+    if version == "v3":
+        dim = pair_feature_dim_v3()
+    elif version == "v2":
+        dim = pair_feature_dim_v2()
+    else:
+        dim = pair_feature_dim()
     if edge_index.numel() == 0:
         return torch.empty((0, dim), dtype=torch.float32, device=edge_index.device)
 
@@ -489,7 +692,9 @@ def pair_feature_matrix(edge_index: Tensor, graph: GraphBundle, version: str = "
         key = (int(src), int(dst))
         features = cache.get(key)
         if features is None:
-            if version == "v2":
+            if version == "v3":
+                features = pair_feature_row_v3(key[0], key[1], sequences)
+            elif version == "v2":
                 features = pair_feature_row_v2(key[0], key[1], sequences)
             else:
                 features = pair_feature_row(key[0], key[1], sequences)

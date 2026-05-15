@@ -1,0 +1,13 @@
+
+[load human] int=12828 mirna_sim=2631 mrna_sim=19848
+[human] e=001 loss=0.6933 val_aupr=0.5739 val_auc=0.6070 *
+[human] e=002 loss=0.6918 val_aupr=0.5894 val_auc=0.6239 *
+[human] e=003 loss=0.6901 val_aupr=0.6121 val_auc=0.6288 *
+[human] e=010 loss=0.6567 val_aupr=0.5252 val_auc=0.5140
+[human] done: best_epoch=3 best_val_aupr=0.6121
+
+[eval target=human] int=12828 mirna_sim=2631 mrna_sim=19848
+[human->human] AUC=0.6472 AUPR=0.6348 F1=0.5148
+
+Saved -> /mnt/d/Projects/GProject/GraphMMI/exp/exp4/multi_encoder/result/multi_encoder_summary.csv
+Mean AUPR: 0.6348

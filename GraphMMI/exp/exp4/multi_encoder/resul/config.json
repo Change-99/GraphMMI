@@ -1,0 +1,32 @@
+{
+  "species": [
+    "human"
+  ],
+  "processed_dir": "/mnt/d/Projects/GProject/GraphMMI/data/processed/graph/random",
+  "run_root": "exp/exp4/multi_encoder/resul",
+  "device": "cpu",
+  "seed": 42,
+  "epochs": 30,
+  "patience": 8,
+  "lr": 0.0005,
+  "weight_decay": 0.0005,
+  "dropout": 0.5,
+  "neg_strategy": "endpoint_corrupt",
+  "neg_ratio": 1.0,
+  "eval_neg_ratio": 1.0,
+  "threshold_metric": "mcc",
+  "eval_setting": "calibrated_zero_shot",
+  "mirna_sim_edges": true,
+  "mrna_sim_edges": true,
+  "num_layers": 4,
+  "hidden_dim": 128,
+  "int_conv": "graphsage",
+  "mirna_sim_conv": "gatv2",
+  "mrna_sim_conv": "graphsage",
+  "gat_heads": 2,
+  "gat_concat": false,
+  "id_embedding_dim": 0,
+  "type_embedding_dim": 8,
+  "species_embedding_dim": 0,
+  "decoder_layer_norm": false
+}

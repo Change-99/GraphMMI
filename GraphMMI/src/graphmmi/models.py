@@ -232,6 +232,141 @@ class LinkDecoder(nn.Module):
         return self.mlp(torch.cat(parts, dim=-1)).squeeze(-1)
 
 
+def _make_single_conv(encoder_name: str, hidden_dim: int, heads: int, concat: bool,
+                      dropout: float, use_edge_weight: bool) -> nn.Module:
+    """Create a single GNN layer (not a full encoder)."""
+    if encoder_name == "graphsage":
+        return MeanSAGELayer(hidden_dim, hidden_dim)
+    layer_out = hidden_dim // heads if concat else hidden_dim
+    return GATv2Layer(hidden_dim, layer_out, heads=heads, concat=concat,
+                      dropout=dropout, use_edge_weight=use_edge_weight)
+
+
+class RelationAwareLayer(nn.Module):
+    """One layer: up to three relation-specific convolutions, then fuse.
+
+    Branches can be individually disabled (outputs h unchanged). This
+    lets GATv2 run fewer layers than GraphSAGE within the shared
+    layer-wise loop.
+    """
+
+    def __init__(self, hidden_dim: int, heads: int, concat: bool, dropout: float,
+                 int_conv: str, mir_conv: str, mrn_conv: str) -> None:
+        super().__init__()
+        self.conv_int = _make_single_conv(int_conv, hidden_dim, heads, concat, dropout, False)
+        self.conv_mir = _make_single_conv(mir_conv, hidden_dim, heads, concat, dropout, (mir_conv == "gatv2"))
+        self.conv_mrn = _make_single_conv(mrn_conv, hidden_dim, heads, concat, dropout, False)
+        self.proj = nn.Linear(hidden_dim * 3, hidden_dim)
+
+    def forward(self, h: Tensor,
+                int_ei: Tensor, mir_ei: Tensor, mir_ew: Tensor | None, mrn_ei: Tensor | None,
+                use_int: bool = True, use_mir: bool = True, use_mrn: bool = True) -> Tensor:
+        h_int = self.conv_int(h, int_ei) if use_int else h
+        h_mir = self.conv_mir(h, mir_ei, edge_weight=mir_ew) if use_mir else h
+        if use_mrn and mrn_ei is not None and mrn_ei.numel():
+            h_mrn = self.conv_mrn(h, mrn_ei)
+        else:
+            h_mrn = h
+
+        cat = torch.cat([h_int, h_mir, h_mrn], dim=-1)
+        fused = self.proj(cat)
+        return F.relu(fused)
+
+
+class MultiEncoderPredictor(nn.Module):
+    """Layer-wise relation-aware GNN predictor.
+
+    Instead of running each encoder to completion and fusing at the end,
+    every layer applies three relation-specific convolutions to the SAME
+    input and fuses them immediately. This preserves cross-edge-type
+    multi-hop paths (e.g. miRNA → mRNA → miRNA-sim → mRNA → ...).
+
+    Defaults reflect experimental findings:
+      interaction conv — GraphSAGE (mean aggregation)
+      miRNA-sim conv   — GATv2 (attention + edge_weight)
+      mRNA-sim conv    — GraphSAGE (mean aggregation, noise-tolerant)
+    """
+
+    def __init__(
+        self,
+        num_numeric_features: int,
+        num_nodes: int,
+        hidden_dim: int = 128,
+        int_layers: int = 4,
+        mirna_sim_layers: int = 1,
+        mrna_sim_layers: int = 4,
+        dropout: float = 0.5,
+        edge_attr_dim: int = 0,
+        int_conv: str = "graphsage",
+        mirna_sim_conv: str = "gatv2",
+        mrna_sim_conv: str = "graphsage",
+        gat_heads: int = 2,
+        gat_concat: bool = False,
+        id_embedding_dim: int = 0,
+        type_embedding_dim: int = 8,
+        species_embedding_dim: int = 0,
+        decoder_layer_norm: bool = False,
+    ) -> None:
+        super().__init__()
+        self.int_layers = int_layers
+        self.mirna_sim_layers = mirna_sim_layers
+        self.mrna_sim_layers = mrna_sim_layers
+        total_layers = max(int_layers, mirna_sim_layers, mrna_sim_layers)
+        self.input_encoder = NodeInputEncoder(
+            num_numeric_features=num_numeric_features,
+            num_nodes=num_nodes,
+            id_embedding_dim=id_embedding_dim,
+            type_embedding_dim=type_embedding_dim,
+            species_embedding_dim=species_embedding_dim,
+            out_dim=hidden_dim,
+            dropout=dropout,
+        )
+        self.layers = nn.ModuleList([
+            RelationAwareLayer(hidden_dim, gat_heads, gat_concat, dropout,
+                               int_conv, mirna_sim_conv, mrna_sim_conv)
+            for _ in range(total_layers)
+        ])
+        self.decoder = LinkDecoder(
+            hidden_dim=hidden_dim,
+            edge_attr_dim=edge_attr_dim,
+            dropout=dropout,
+            layer_norm=decoder_layer_norm,
+        )
+
+    def encode(
+        self,
+        x: Tensor, node_type: Tensor, species_id: Tensor,
+        int_edge_index: Tensor,
+        mirna_edge_index: Tensor, mirna_edge_weight: Tensor | None = None,
+        mrna_edge_index: Tensor | None = None,
+    ) -> Tensor:
+        h = self.input_encoder(x, node_type, species_id)
+        for i, layer in enumerate(self.layers):
+            h = layer(h, int_edge_index, mirna_edge_index, mirna_edge_weight, mrna_edge_index,
+                      use_int=(i < self.int_layers),
+                      use_mir=(i < self.mirna_sim_layers),
+                      use_mrn=(i < self.mrna_sim_layers))
+            h = F.dropout(h, p=0.3, training=self.training)
+        return h
+
+    def decode(self, z: Tensor, edge_label_index: Tensor, edge_attr: Tensor | None = None) -> Tensor:
+        return self.decoder(z, edge_label_index, edge_attr)
+
+    def forward(
+        self,
+        x: Tensor, node_type: Tensor, species_id: Tensor,
+        int_edge_index: Tensor,
+        edge_label_index: Tensor,
+        edge_attr: Tensor | None = None,
+        mirna_edge_index: Tensor | None = None,
+        mirna_edge_weight: Tensor | None = None,
+        mrna_edge_index: Tensor | None = None,
+    ) -> Tensor:
+        mir_ei = mirna_edge_index if mirna_edge_index is not None else int_edge_index
+        z = self.encode(x, node_type, species_id, int_edge_index, mir_ei, mirna_edge_weight, mrna_edge_index)
+        return self.decode(z, edge_label_index, edge_attr)
+
+
 class GraphMMILinkPredictor(nn.Module):
     """Shared predictor; only the GNN encoder changes between GraphSAGE and GATv2."""
 

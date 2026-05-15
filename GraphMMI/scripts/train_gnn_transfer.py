@@ -27,7 +27,9 @@ from torch import Tensor
 import torch.nn.functional as F
 
 sys.path.insert(0, str(ROOT / "src"))
-from graphmmi import GraphMMILinkPredictor, load_graph_bundle, pair_feature_dim, pair_feature_matrix, sample_negative_edges
+from graphmmi import GraphMMILinkPredictor, load_graph_bundle, \
+    pair_feature_dim, pair_feature_dim_v2, pair_feature_dim_v3, \
+    pair_feature_matrix, sample_negative_edges
 from graphmmi.data import GraphBundle, positive_pair_set
 
 
@@ -123,6 +125,10 @@ def parse_args() -> argparse.Namespace:
         help="Keep original positive-only edge attributes in GraphBundle. Off by default to reduce RAM.",
     )
     parser.add_argument("--edge-attr-mode", choices=["none", "pair"], default="pair")
+    parser.add_argument("--pair-feature-version", choices=["v1", "v2", "v3"], default="v1",
+                        help="Pair feature version: v1 (17d), v2 (28d), v3 (40d).")
+    parser.add_argument("--pretrained-encoder", type=Path, default=None,
+                        help="Path to GraphMAE-pretrained encoder .pt file for weight initialization.")
     parser.add_argument(
         "--use-edge-attr",
         action="store_true",
@@ -221,6 +227,14 @@ def embedding_dims_for_setting(args: argparse.Namespace, setting: str) -> tuple[
     return args.id_embedding_dim, args.species_embedding_dim
 
 
+def _pair_feature_dim_for_version(version: str) -> int:
+    if version == "v3":
+        return pair_feature_dim_v3()
+    if version == "v2":
+        return pair_feature_dim_v2()
+    return pair_feature_dim()
+
+
 def build_model(
     args: argparse.Namespace,
     encoder: str,
@@ -229,7 +243,7 @@ def build_model(
     device: torch.device,
 ) -> GraphMMILinkPredictor:
     id_dim, species_dim = embedding_dims_for_setting(args, setting)
-    edge_attr_dim = pair_feature_dim() if args.edge_attr_mode == "pair" else 0
+    edge_attr_dim = _pair_feature_dim_for_version(args.pair_feature_version) if args.edge_attr_mode == "pair" else 0
     use_edge_weight = (encoder == "gatv2") and (args.mirna_sim_edges or args.mrna_sim_edges)
     return GraphMMILinkPredictor(
         encoder_name=encoder,
@@ -264,6 +278,38 @@ def compatible_state_dict(
         if key in target_state and tuple(target_state[key].shape) == tuple(value.shape):
             compatible[key] = value
     return compatible
+
+
+def _load_pretrained_encoder(model: GraphMMILinkPredictor, ckpt_path: Path,
+                             species: str, device: torch.device) -> None:
+    """Load GraphMAE-pretrained encoder weights into model.
+
+    Handles the case where ckpt_path is a directory with per-species files
+    (e.g. ``runs/pretrain_graphmae/human_graphsage_l4_mae.pt``) or a single
+    .pt file.
+    """
+    if ckpt_path.is_dir():
+        # Look for <species>_*.pt inside the directory
+        candidates = sorted(ckpt_path.glob(f"{species}_*.pt"))
+        if not candidates:
+            print(f"[pretrained] no checkpoint for {species} in {ckpt_path}, skipping")
+            return
+        ckpt_path = candidates[0]
+
+    if not ckpt_path.exists():
+        print(f"[pretrained] {ckpt_path} not found, skipping")
+        return
+
+    ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
+    # Prefer "encoder_state_dict" (new format, encoder-only).
+    # Fall back to "model_state_dict" for backward compat with old checkpoints.
+    source_state = ckpt.get("encoder_state_dict") or ckpt.get("model_state_dict") or ckpt
+    state = compatible_state_dict(source_state, model)
+    missing, unexpected = model.load_state_dict(state, strict=False)
+    encoder_missing = [k for k in missing if not k.startswith("decoder.")]
+    print(f"[pretrained] {ckpt_path.name}: loaded {len(state)}/{len(source_state)} keys, "
+          f"missing={len(missing)} (encoder: {len(encoder_missing)}), "
+          f"unexpected={len(unexpected)}")
 
 
 def clone_state_dict(model: torch.nn.Module) -> dict[str, torch.Tensor]:
@@ -516,9 +562,10 @@ def build_batch(
     device: torch.device,
     neg_strategy: str,
     fixed_neg_edge_index: torch.Tensor | None = None,
+    edge_attr_version: str = "v1",
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor | None]:
     if fixed_neg_edge_index is not None:
-        cache_key = f"{split}:{edge_attr_mode}:{id(fixed_neg_edge_index)}"
+        cache_key = f"{split}:{edge_attr_mode}:{edge_attr_version}:{id(fixed_neg_edge_index)}"
         cached = graph.batch_cache.get(cache_key)
         if cached is not None:
             return cached
@@ -548,7 +595,7 @@ def build_batch(
         ],
         dim=0,
     )
-    edge_attr = pair_feature_matrix(edge_label_index, graph) if edge_attr_mode == "pair" else None
+    edge_attr = pair_feature_matrix(edge_label_index, graph, version=edge_attr_version) if edge_attr_mode == "pair" else None
     order = torch.randperm(labels.numel(), device=labels.device)
     edge_label_index = edge_label_index[:, order]
     labels = labels[order]
@@ -579,6 +626,7 @@ def predict_split(
         device=device,
         neg_strategy=eval_negative_strategy(args) if split in {"val", "test"} else args.neg_strategy,
         fixed_neg_edge_index=fixed_neg_edge_index,
+        edge_attr_version=args.pair_feature_version,
     )
     mp_edge_index, mp_edge_weight = resolve_edge_index_for_training(graph, args)
     logits = model(graph.x, graph.node_type, graph.species_id, mp_edge_index, edge_label_index, edge_attr, edge_weight=mp_edge_weight)
@@ -656,6 +704,7 @@ def train_on_graph(
             edge_attr_mode=args.edge_attr_mode,
             device=device,
             neg_strategy=args.neg_strategy,
+            edge_attr_version=args.pair_feature_version,
         )
         optimizer.zero_grad(set_to_none=True)
         mp_edge_index, mp_edge_weight = resolve_edge_index_for_training(graph, args)
@@ -900,6 +949,8 @@ def run_experiments(args: argparse.Namespace, run_dir: Path) -> list[dict[str, A
                 src_eval_negatives = fixed_eval_negatives(source, src_graph, args, device)
                 set_seed(stable_seed(args.seed, encoder, setting, source, "source"))
                 model = build_model(args, encoder, setting, src_graph, device)
+                if args.pretrained_encoder is not None:
+                    _load_pretrained_encoder(model, args.pretrained_encoder, source, device)
                 train_result = train_on_graph(
                     args=args, model=model, graph=src_graph,
                     encoder=encoder, setting=setting, species=source,
