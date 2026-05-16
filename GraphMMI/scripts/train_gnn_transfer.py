@@ -125,10 +125,8 @@ def parse_args() -> argparse.Namespace:
         help="Keep original positive-only edge attributes in GraphBundle. Off by default to reduce RAM.",
     )
     parser.add_argument("--edge-attr-mode", choices=["none", "pair"], default="pair")
-    parser.add_argument("--pair-feature-version", choices=["v1", "v2", "v3"], default="v1",
-                        help="Pair feature version: v1 (17d), v2 (28d), v3 (40d).")
-    parser.add_argument("--pretrained-encoder", type=Path, default=None,
-                        help="Path to GraphMAE-pretrained encoder .pt file for weight initialization.")
+    parser.add_argument("--pair-feature-version", choices=["v1", "v2", "v3"], default="v3")
+    parser.add_argument("--pretrained-encoder", type=Path, default=None)
     parser.add_argument(
         "--use-edge-attr",
         action="store_true",
@@ -228,10 +226,8 @@ def embedding_dims_for_setting(args: argparse.Namespace, setting: str) -> tuple[
 
 
 def _pair_feature_dim_for_version(version: str) -> int:
-    if version == "v3":
-        return pair_feature_dim_v3()
-    if version == "v2":
-        return pair_feature_dim_v2()
+    if version == "v3": return pair_feature_dim_v3()
+    if version == "v2": return pair_feature_dim_v2()
     return pair_feature_dim()
 
 
@@ -280,40 +276,27 @@ def compatible_state_dict(
     return compatible
 
 
-def _load_pretrained_encoder(model: GraphMMILinkPredictor, ckpt_path: Path,
-                             species: str, device: torch.device) -> None:
-    """Load GraphMAE-pretrained encoder weights into model.
+def clone_state_dict(model: torch.nn.Module) -> dict[str, torch.Tensor]:
+    return {key: value.detach().cpu().clone() for key, value in model.state_dict().items()}
 
-    Handles the case where ckpt_path is a directory with per-species files
-    (e.g. ``runs/pretrain_graphmae/human_graphsage_l4_mae.pt``) or a single
-    .pt file.
-    """
+
+def _load_pretrained_encoder(model, ckpt_path, species, device):
     if ckpt_path.is_dir():
-        # Look for <species>_*.pt inside the directory
         candidates = sorted(ckpt_path.glob(f"{species}_*.pt"))
         if not candidates:
             print(f"[pretrained] no checkpoint for {species} in {ckpt_path}, skipping")
             return
         ckpt_path = candidates[0]
-
     if not ckpt_path.exists():
         print(f"[pretrained] {ckpt_path} not found, skipping")
         return
-
     ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
-    # Prefer "encoder_state_dict" (new format, encoder-only).
-    # Fall back to "model_state_dict" for backward compat with old checkpoints.
     source_state = ckpt.get("encoder_state_dict") or ckpt.get("model_state_dict") or ckpt
     state = compatible_state_dict(source_state, model)
     missing, unexpected = model.load_state_dict(state, strict=False)
     encoder_missing = [k for k in missing if not k.startswith("decoder.")]
     print(f"[pretrained] {ckpt_path.name}: loaded {len(state)}/{len(source_state)} keys, "
-          f"missing={len(missing)} (encoder: {len(encoder_missing)}), "
-          f"unexpected={len(unexpected)}")
-
-
-def clone_state_dict(model: torch.nn.Module) -> dict[str, torch.Tensor]:
-    return {key: value.detach().cpu().clone() for key, value in model.state_dict().items()}
+          f"missing={len(missing)} (encoder: {len(encoder_missing)}), unexpected={len(unexpected)}")
 
 
 def train_summary(train_result: TrainResult) -> TrainSummary:
@@ -1068,6 +1051,9 @@ def main() -> None:
     if args.use_edge_attr:
         args.edge_attr_mode = "pair"
     set_seed(args.seed)
+    if not args.skip_preprocess and not args.refresh_fixed_negatives:
+        print("[WARN] --skip-preprocess not set; may auto-run old preprocessing script.")
+        print("[WARN] Use --skip-preprocess --refresh-fixed-negatives for final experiments.")
     ensure_preprocessed(args)
 
     run_dir = args.run_root / time.strftime("%Y%m%d-%H%M%S")
