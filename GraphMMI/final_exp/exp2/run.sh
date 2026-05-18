@@ -30,7 +30,7 @@ echo ""
 # ---- Step 2: GraphSAGE L4 ----
 echo "[2/3] Running GraphSAGE L4 (target_site)..."
 python -u scripts/train_gnn_transfer.py \
-  --species human  \
+  --species human  cow mouse worm\
   --encoders graphsage \
   --settings strict_zero_shot finetune \
   --epochs 40 --patience 8 \
@@ -38,7 +38,6 @@ python -u scripts/train_gnn_transfer.py \
   --graphsage-hidden-dim 128 \
   --processed-dir "$ROOT/data/processed/graph/final_target_site" \
   --mirna-sim-edges --mrna-sim-edges \
-  --neg-strategy degree_aware \
   --skip-preprocess --refresh-fixed-negatives \
   --run-root "$RESULT_DIR" \
   --no-heatmaps \
@@ -49,7 +48,7 @@ echo ""
 # ---- Step 3: GATv2 L1 ----
 echo "[3/3] Running GATv2 L1 (target_site)..."
 python -u scripts/train_gnn_transfer.py \
-  --species human  \
+  --species human  cow mouse worm\
   --encoders gatv2 \
   --settings strict_zero_shot finetune \
   --epochs 40 --patience 8 \
@@ -58,7 +57,6 @@ python -u scripts/train_gnn_transfer.py \
   --processed-dir "$ROOT/data/processed/graph/final_target_site" \
   --mirna-sim-edges --mrna-sim-edges \
   --skip-preprocess --refresh-fixed-negatives \
-  --neg-strategy degree_aware \
   --run-root "$RESULT_DIR" \
   --no-heatmaps \
   2>&1 | tee "$RESULT_DIR/gatv2_run.log"
