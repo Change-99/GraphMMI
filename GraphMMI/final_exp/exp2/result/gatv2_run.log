@@ -1,0 +1,14 @@
+[CONFIG] pair_feature_version=v3 dim=40
+[gatv2/strict_zero_shot/source/human] epoch=001 loss=0.7442 val_aupr=0.5179 val_auc=0.5408
+[gatv2/strict_zero_shot/source/human] epoch=002 loss=0.7343 val_aupr=0.5758 val_auc=0.5987
+[gatv2/strict_zero_shot/source/human] epoch=003 loss=0.7273 val_aupr=0.7629 val_auc=0.7524
+[gatv2/strict_zero_shot/source/human] epoch=007 loss=0.6952 val_aupr=0.7771 val_auc=0.7652
+[gatv2/strict_zero_shot/source/human] epoch=008 loss=0.6835 val_aupr=0.8163 val_auc=0.8093
+[gatv2/strict_zero_shot/source/human] epoch=009 loss=0.6718 val_aupr=0.8285 val_auc=0.8221
+[RESULT] gatv2/strict_zero_shot human->human AUC=0.8295 AUPR=0.8392 F1=0.3344 MCC=0.3174 thr=0.5000
+[gatv2/finetune/source/human] epoch=001 loss=0.7210 val_aupr=0.4952 val_auc=0.4953
+[gatv2/finetune/source/human] epoch=002 loss=0.8057 val_aupr=0.5268 val_auc=0.5218
+[gatv2/finetune/source/human] epoch=003 loss=0.7180 val_aupr=0.6418 val_auc=0.6247
+[gatv2/finetune/source/human] epoch=005 loss=0.7340 val_aupr=0.6544 val_auc=0.6616
+[gatv2/finetune/source/human] epoch=006 loss=0.7203 val_aupr=0.7609 val_auc=0.7594
+[gatv2/finetune/source/human] epoch=007 loss=0.7012 val_aupr=0.7804 val_auc=0.7718

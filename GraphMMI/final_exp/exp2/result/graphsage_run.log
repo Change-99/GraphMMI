@@ -1,0 +1,15 @@
+[CONFIG] pair_feature_version=v3 dim=40
+[graphsage/strict_zero_shot/source/human] epoch=001 loss=0.6971 val_aupr=0.5638 val_auc=0.5718
+[graphsage/strict_zero_shot/source/human] epoch=002 loss=0.7222 val_aupr=0.7710 val_auc=0.7554
+[graphsage/strict_zero_shot/source/human] epoch=003 loss=0.6908 val_aupr=0.7903 val_auc=0.7560
+[graphsage/strict_zero_shot/source/human] epoch=005 loss=0.6971 val_aupr=0.8281 val_auc=0.8049
+[graphsage/strict_zero_shot/source/human] epoch=006 loss=0.6876 val_aupr=0.8607 val_auc=0.8477
+[graphsage/strict_zero_shot/source/human] epoch=012 loss=0.6623 val_aupr=0.8617 val_auc=0.8488
+[graphsage/strict_zero_shot/source/human] epoch=018 loss=0.6344 val_aupr=0.8630 val_auc=0.8506
+[graphsage/strict_zero_shot/source/human] epoch=019 loss=0.6220 val_aupr=0.8649 val_auc=0.8544
+[graphsage/strict_zero_shot/source/human] epoch=020 loss=0.6151 val_aupr=0.8669 val_auc=0.8582
+[graphsage/strict_zero_shot/source/human] epoch=021 loss=0.6050 val_aupr=0.8695 val_auc=0.8622
+[RESULT] graphsage/strict_zero_shot human->human AUC=0.8589 AUPR=0.8687 F1=0.7494 MCC=0.5673 thr=0.5000
+[graphsage/finetune/source/human] epoch=001 loss=0.7107 val_aupr=0.5407 val_auc=0.5418
+[graphsage/finetune/source/human] epoch=002 loss=0.7317 val_aupr=0.6019 val_auc=0.6051
+[graphsage/finetune/source/human] epoch=003 loss=0.7053 val_aupr=0.8171 val_auc=0.7985
