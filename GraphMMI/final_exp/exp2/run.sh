@@ -40,7 +40,6 @@ python -u scripts/train_gnn_transfer.py \
   --mirna-sim-edges --mrna-sim-edges \
   --skip-preprocess --refresh-fixed-negatives \
   --run-root "$RESULT_DIR" \
-  --no-heatmaps \
   2>&1 | tee "$RESULT_DIR/graphsage_run.log"
 
 echo ""
@@ -58,7 +57,6 @@ python -u scripts/train_gnn_transfer.py \
   --mirna-sim-edges --mrna-sim-edges \
   --skip-preprocess --refresh-fixed-negatives \
   --run-root "$RESULT_DIR" \
-  --no-heatmaps \
   2>&1 | tee "$RESULT_DIR/gatv2_run.log"
 
 echo ""
