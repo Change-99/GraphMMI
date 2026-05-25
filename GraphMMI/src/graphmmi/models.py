@@ -49,13 +49,22 @@ class MeanSAGELayer(nn.Module):
         super().__init__()
         self.linear = nn.Linear(in_channels * 2, out_channels)
 
-    def forward(self, x: Tensor, edge_index: Tensor) -> Tensor:
+    def forward(self, x: Tensor, edge_index: Tensor,
+                edge_weight: Tensor | None = None) -> Tensor:
         src, dst = edge_index
-        neigh_sum = x.new_zeros(x.size(0), x.size(1))
-        neigh_sum.index_add_(0, dst, x[src])
-        degree = x.new_zeros(x.size(0), 1)
-        degree.index_add_(0, dst, torch.ones(dst.numel(), 1, dtype=x.dtype, device=x.device))
-        neigh_mean = neigh_sum / degree.clamp_min(1.0)
+        if edge_weight is not None:
+            w = edge_weight.unsqueeze(-1).to(dtype=x.dtype)  # (E, 1)
+            neigh_sum = x.new_zeros(x.size(0), x.size(1))
+            neigh_sum.index_add_(0, dst, x[src] * w)
+            weight_sum = x.new_zeros(x.size(0), 1)
+            weight_sum.index_add_(0, dst, w)
+            neigh_mean = neigh_sum / weight_sum.clamp_min(1e-8)
+        else:
+            neigh_sum = x.new_zeros(x.size(0), x.size(1))
+            neigh_sum.index_add_(0, dst, x[src])
+            degree = x.new_zeros(x.size(0), 1)
+            degree.index_add_(0, dst, torch.ones(dst.numel(), 1, dtype=x.dtype, device=x.device))
+            neigh_mean = neigh_sum / degree.clamp_min(1.0)
         return self.linear(torch.cat([x, neigh_mean], dim=-1))
 
 
@@ -79,7 +88,7 @@ class GraphSAGEEncoder(nn.Module):
         h = x
         for layer_idx, layer in enumerate(self.layers):
             h_in = h
-            h = layer(h, edge_index)
+            h = layer(h, edge_index, edge_weight=edge_weight)
             if self.layer_norm:
                 h = self.norms[layer_idx](h)
             if self.residual:

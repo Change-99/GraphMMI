@@ -108,8 +108,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--mrna-sequence-source", choices=["target", "full"],
                    default="target")
     # similarity edges
-    p.add_argument("--mirna-sim-edges", action="store_true", default=True)
-    p.add_argument("--mrna-sim-edges", action="store_true", default=True)
+    p.add_argument("--mirna-sim-edges", action=argparse.BooleanOptionalAction, default=True)
+    p.add_argument("--mrna-sim-edges", action=argparse.BooleanOptionalAction, default=True)
     p.add_argument("--mirna-sim-topk", type=int, default=5)
     p.add_argument("--mrna-sim-topk", type=int, default=5)
     p.add_argument("--sim-mode", choices=["topk", "mutual", "threshold_topk"],
@@ -202,8 +202,15 @@ def read_positive_file(rf: RawPosFile, args: argparse.Namespace) -> pd.DataFrame
 
     df["mirna_id"] = rf.species + "|" + df["microRNA_name"].map(clean_text)
     df["mrna_id"] = rf.species + "|" + df["mRNA_name"].map(clean_text)
+    if "site_start" in df.columns:
+        site_start = (pd.to_numeric(df["site_start"], errors="coerce")
+                      .fillna(-1).astype(int).astype(str))
+    else:
+        site_start = pd.Series(["NA"] * len(df), index=df.index)
+
     df["target_site_id"] = (rf.species + "|"
                             + df["mRNA_name"].map(clean_text)
+                            + "|" + site_start
                             + "|" + df["target_seq"].map(short_hash))
     df["label"] = 1
     return df
@@ -500,7 +507,8 @@ def infer_edge_attr_columns(edges: pd.DataFrame, drop_hot: bool) -> list[str]:
     forbidden = METADATA_COLUMNS | {
         "raw_index", "species", "dataset_id", "source_file", "source_row",
         "mirna_id", "mrna_id", "target_site_id", "mirna_seq", "target_seq",
-        "full_mrna_seq", "mrna_seq", "label", "split", "src_idx", "dst_idx"}
+        "full_mrna_seq", "mrna_seq", "site_start", "site_end",
+        "label", "split", "src_idx", "dst_idx"}
     cols = []
     for c in edges.columns:
         if c in forbidden:
@@ -581,8 +589,11 @@ def _cosine_similarity_topk(vecs: np.ndarray, topk: int,
         sim[i] = -2.0
         if sim_mode == "threshold_topk":
             sim[sim < sim_threshold] = sim_threshold - 1.0
-        top = (np.argpartition(-sim, eff_k)[:eff_k]
-               if eff_k < n else np.argsort(-sim)[:eff_k])
+        if eff_k < n:
+            top = np.argpartition(-sim, eff_k - 1)[:eff_k]
+            top = top[np.argsort(-sim[top])]
+        else:
+            top = np.argsort(-sim)[:eff_k]
         for j in top:
             s = float(sim[j])
             if s > 0.0:
@@ -834,6 +845,7 @@ def export_species_graph(species: str, edges: pd.DataFrame,
     clean, report = clean_positive_edges(edges, node_mode=args.node_mode)
     clean["split"] = split_edges(clean, sseed,
                                  args.train_ratio, args.val_ratio, args.test_ratio)
+    print(f"  cleaned: {report['clean_positive_edges']} edges, building nodes...", flush=True)
 
     # build nodes
     if args.node_mode == "mrna":
@@ -885,12 +897,14 @@ def export_species_graph(species: str, edges: pd.DataFrame,
 
     mir_sim = empty
     if args.mirna_sim_edges:
+        print(f"  building mirna sim edges (topk={args.mirna_sim_topk})...", flush=True)
         mir_sim = build_mirna_similarity_edges(nodes, x_raw, args.kmer_sizes, args)
         if mir_sim[0].size:
             sim_parts.append(mir_sim)
 
     mrn_sim = empty
     if args.mrna_sim_edges:
+        print(f"  building target sim edges (topk={args.mrna_sim_topk})...", flush=True)
         mrn_sim = build_target_similarity_edges(nodes, args)
         if mrn_sim[0].size:
             sim_parts.append(mrn_sim)
@@ -1006,8 +1020,59 @@ def export_species_graph(species: str, edges: pd.DataFrame,
         "sim_threshold": args.sim_threshold if args.sim_mode == "threshold_topk" else None,
         "pair_feature_dim": PAIR_V3_DIM,
     }
+    # split diagnostic
+    diag = _split_diagnostic(clean, node_mode=args.node_mode)
+    meta["split_diagnostic"] = diag
+    print(f"  split_diag: (mirna_id,ts_id) overlap train/val={diag['pair_overlap_train_val']} "
+          f"train/test={diag['pair_overlap_train_test']} val/test={diag['pair_overlap_val_test']}", flush=True)
+
     (gdir / "metadata.json").write_text(json.dumps(json_safe(meta), indent=2), encoding="utf-8")
     return meta
+
+
+def _split_diagnostic(clean: pd.DataFrame, node_mode: str) -> dict:
+    """Compute train/val/test overlap statistics."""
+    pair_cols = (["mirna_id", "target_site_id"] if node_mode in ("target_site", "hierarchical")
+                 else ["mirna_id", "mrna_id"])
+    train_pairs = set(zip(clean.loc[clean["split"] == "train", pair_cols[0]],
+                          clean.loc[clean["split"] == "train", pair_cols[1]]))
+    val_pairs = set(zip(clean.loc[clean["split"] == "val", pair_cols[0]],
+                        clean.loc[clean["split"] == "val", pair_cols[1]]))
+    test_pairs = set(zip(clean.loc[clean["split"] == "test", pair_cols[0]],
+                         clean.loc[clean["split"] == "test", pair_cols[1]]))
+
+    # mRNA-level overlap (for target_site mode)
+    mrna_pairs_train = set(zip(clean.loc[clean["split"] == "train", "mirna_id"],
+                               clean.loc[clean["split"] == "train", "mrna_id"]))
+    mrna_pairs_test = set(zip(clean.loc[clean["split"] == "test", "mirna_id"],
+                              clean.loc[clean["split"] == "test", "mrna_id"]))
+    mrna_overlap = mrna_pairs_train & mrna_pairs_test
+
+    train_mask = clean["split"] == "train"
+    test_mask = clean["split"] == "test"
+    shared_mirna = len(set(clean.loc[train_mask, "mirna_id"])
+                       & set(clean.loc[test_mask, "mirna_id"]))
+    shared_target_site = len(set(clean.loc[train_mask, "target_site_id"])
+                             & set(clean.loc[test_mask, "target_site_id"]))
+    shared_mrna = len(set(clean.loc[train_mask, "mrna_id"])
+                      & set(clean.loc[test_mask, "mrna_id"]))
+
+    return {
+        "pair_key": pair_cols,
+        "num_train_pairs": len(train_pairs),
+        "num_val_pairs": len(val_pairs),
+        "num_test_pairs": len(test_pairs),
+        "pair_overlap_train_val": len(train_pairs & val_pairs),
+        "pair_overlap_train_test": len(train_pairs & test_pairs),
+        "pair_overlap_val_test": len(val_pairs & test_pairs),
+        "mrna_level_train_test_overlap": len(mrna_overlap),
+        "mrna_level_overlap_ratio": round(len(mrna_overlap) / max(len(mrna_pairs_test), 1), 4),
+        "shared_mirna_train_test": shared_mirna,
+        "shared_target_site_train_test": shared_target_site,
+        "shared_mrna_train_test": shared_mrna,
+        "num_test_target_sites": clean.loc[test_mask, "target_site_id"].nunique(),
+        "num_test_mrna": clean.loc[test_mask, "mrna_id"].nunique(),
+    }
 
 
 # ------------------------------------------------------------------
@@ -1030,6 +1095,7 @@ def main() -> None:
         frames = raw_by.get(sp, [])
         if not frames:
             continue
+        print(f"[{sp}] processing {len(frames)} CSV files...", flush=True)
         meta = export_species_graph(sp, pd.concat(frames, ignore_index=True, sort=False), args)
         summary["species"][sp] = meta
 

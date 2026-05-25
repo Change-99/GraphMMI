@@ -1,0 +1,9 @@
+[CONFIG] pair_feature_version=v3 dim=40
+[graphsage/strict_zero_shot/source/human] epoch=001 loss=0.7200 val_aupr=0.5757 val_auc=0.5372
+[graphsage/strict_zero_shot/source/human] epoch=002 loss=0.7199 val_aupr=0.6268 val_auc=0.5751
+[graphsage/strict_zero_shot/source/human] epoch=003 loss=0.7099 val_aupr=0.7494 val_auc=0.7155
+[graphsage/strict_zero_shot/source/human] epoch=007 loss=0.6944 val_aupr=0.7514 val_auc=0.7374
+[graphsage/strict_zero_shot/source/human] epoch=008 loss=0.6904 val_aupr=0.8309 val_auc=0.8108
+[graphsage/strict_zero_shot/source/human] epoch=009 loss=0.6842 val_aupr=0.8596 val_auc=0.8470
+[RESULT] graphsage/strict_zero_shot human->human AUC=0.8488 AUPR=0.8552 F1=0.6670 MCC=0.0287 thr=0.5000
+Saved GNN transfer run to: /mnt/d/Projects/GProject/GraphMMI/final_exp/exp3/B_encoders/result/20260519-104224

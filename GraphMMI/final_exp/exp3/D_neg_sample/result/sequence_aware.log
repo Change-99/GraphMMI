@@ -1,0 +1,27 @@
+[CONFIG] pair_feature_version=v3 dim=40
+[graphsage/strict_zero_shot/source/human] epoch=001 loss=0.7036 val_aupr=0.5684 val_auc=0.5670
+[graphsage/strict_zero_shot/source/human] epoch=002 loss=0.7295 val_aupr=0.5813 val_auc=0.5789
+[graphsage/strict_zero_shot/source/human] epoch=003 loss=0.6990 val_aupr=0.6034 val_auc=0.6000
+[graphsage/strict_zero_shot/source/human] epoch=004 loss=0.6949 val_aupr=0.6508 val_auc=0.6362
+[RESULT] graphsage/strict_zero_shot human->human AUC=0.6465 AUPR=0.6612 F1=0.6667 MCC=0.0000 thr=0.5000
+[graphsage/finetune/source/human] epoch=001 loss=0.7167 val_aupr=0.5484 val_auc=0.5432
+[graphsage/finetune/source/human] epoch=002 loss=0.7295 val_aupr=0.5691 val_auc=0.5648
+[graphsage/finetune/source/human] epoch=003 loss=0.7107 val_aupr=0.5917 val_auc=0.5886
+[graphsage/finetune/source/human] epoch=004 loss=0.6968 val_aupr=0.6270 val_auc=0.6301
+[graphsage/finetune/source/human] epoch=005 loss=0.7007 val_aupr=0.6302 val_auc=0.6313
+[graphsage/finetune/finetune/human->human] epoch=001 loss=0.7015 val_aupr=0.6102 val_auc=0.6012
+[graphsage/finetune/finetune/human->human] epoch=003 loss=0.6963 val_aupr=0.6113 val_auc=0.5993
+[graphsage/finetune/finetune/human->human] epoch=004 loss=0.6947 val_aupr=0.6149 val_auc=0.6027
+[graphsage/finetune/finetune/human->human] epoch=005 loss=0.6888 val_aupr=0.6175 val_auc=0.6060
+[graphsage/finetune/finetune/human->human] epoch=006 loss=0.6870 val_aupr=0.6205 val_auc=0.6087
+[graphsage/finetune/finetune/human->human] epoch=007 loss=0.6883 val_aupr=0.6233 val_auc=0.6105
+[graphsage/finetune/finetune/human->human] epoch=008 loss=0.6884 val_aupr=0.6257 val_auc=0.6110
+[graphsage/finetune/finetune/human->human] epoch=009 loss=0.6860 val_aupr=0.6264 val_auc=0.6099
+[graphsage/finetune/finetune/human->human] epoch=010 loss=0.6848 val_aupr=0.6270 val_auc=0.6092
+[graphsage/finetune/finetune/human->human] epoch=011 loss=0.6802 val_aupr=0.6275 val_auc=0.6095
+[graphsage/finetune/finetune/human->human] epoch=012 loss=0.6816 val_aupr=0.6283 val_auc=0.6101
+[graphsage/finetune/finetune/human->human] epoch=013 loss=0.6807 val_aupr=0.6298 val_auc=0.6109
+[graphsage/finetune/finetune/human->human] epoch=014 loss=0.6796 val_aupr=0.6317 val_auc=0.6120
+[graphsage/finetune/finetune/human->human] epoch=015 loss=0.6771 val_aupr=0.6345 val_auc=0.6136
+[RESULT] graphsage/finetune human->human AUC=0.6353 AUPR=0.6440 F1=0.4799 MCC=0.2211 thr=0.5354
+Saved GNN transfer run to: /mnt/d/Projects/GProject/GraphMMI/final_exp/exp3/D_neg_sample/result/20260519-115706

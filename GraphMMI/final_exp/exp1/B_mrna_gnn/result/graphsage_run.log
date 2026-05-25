@@ -1,0 +1,37 @@
+[CONFIG] pair_feature_version=v3 dim=40
+[graphsage/strict_zero_shot/source/human] epoch=001 loss=4.3169 val_aupr=0.4697 val_auc=0.4723
+[graphsage/strict_zero_shot/source/human] epoch=002 loss=9.7950 val_aupr=0.4700 val_auc=0.4723
+[graphsage/strict_zero_shot/source/human] epoch=003 loss=8.4001 val_aupr=0.4713 val_auc=0.4725
+[graphsage/strict_zero_shot/source/human] epoch=004 loss=4.6470 val_aupr=0.5199 val_auc=0.5283
+[graphsage/strict_zero_shot/source/human] epoch=007 loss=3.2591 val_aupr=0.5203 val_auc=0.5299
+[graphsage/strict_zero_shot/source/cow] epoch=001 loss=2.5780 val_aupr=0.4670 val_auc=0.4518
+[graphsage/strict_zero_shot/source/cow] epoch=002 loss=6.3197 val_aupr=0.4672 val_auc=0.4518
+[graphsage/strict_zero_shot/source/cow] epoch=004 loss=2.1512 val_aupr=0.5310 val_auc=0.5486
+[graphsage/strict_zero_shot/source/cow] epoch=007 loss=3.1017 val_aupr=0.5338 val_auc=0.5488
+[graphsage/strict_zero_shot/source/cow] epoch=008 loss=2.1783 val_aupr=0.5347 val_auc=0.5502
+[graphsage/strict_zero_shot/source/cow] epoch=016 loss=1.1114 val_aupr=0.5356 val_auc=0.5507
+[graphsage/strict_zero_shot/source/cow] epoch=017 loss=1.0736 val_aupr=0.5370 val_auc=0.5532
+[graphsage/strict_zero_shot/source/cow] epoch=018 loss=0.9344 val_aupr=0.5416 val_auc=0.5592
+[graphsage/strict_zero_shot/source/cow] epoch=019 loss=0.8198 val_aupr=0.5691 val_auc=0.5662
+[graphsage/strict_zero_shot/source/mouse] epoch=001 loss=5.1784 val_aupr=0.5477 val_auc=0.5552
+[graphsage/strict_zero_shot/source/worm] epoch=001 loss=1.2187 val_aupr=0.5505 val_auc=0.5303
+[graphsage/strict_zero_shot/source/worm] epoch=002 loss=1.8057 val_aupr=0.5508 val_auc=0.5305
+[graphsage/strict_zero_shot/source/worm] epoch=003 loss=1.5994 val_aupr=0.5522 val_auc=0.5309
+[graphsage/strict_zero_shot/source/worm] epoch=008 loss=0.9656 val_aupr=0.5569 val_auc=0.5381
+[graphsage/strict_zero_shot/source/worm] epoch=011 loss=0.9010 val_aupr=0.5584 val_auc=0.5415
+[graphsage/strict_zero_shot/source/worm] epoch=012 loss=0.8529 val_aupr=0.6260 val_auc=0.6265
+[RESULT] graphsage/strict_zero_shot human->human AUC=0.5179 AUPR=0.5084 F1=0.6645 MCC=0.0099 thr=0.5000
+[RESULT] graphsage/strict_zero_shot human->cow AUC=0.5578 AUPR=0.5446 F1=0.6645 MCC=0.0398 thr=0.5000
+[RESULT] graphsage/strict_zero_shot human->mouse AUC=0.5504 AUPR=0.5414 F1=0.6662 MCC=0.0311 thr=0.5000
+[RESULT] graphsage/strict_zero_shot human->worm AUC=0.5447 AUPR=0.5355 F1=0.6224 MCC=0.0609 thr=0.5000
+[RESULT] graphsage/strict_zero_shot cow->human AUC=0.5002 AUPR=0.5167 F1=0.0000 MCC=0.0000 thr=0.5000
+[RESULT] graphsage/strict_zero_shot cow->cow AUC=0.5448 AUPR=0.5438 F1=0.0000 MCC=0.0000 thr=0.5000
+[RESULT] graphsage/strict_zero_shot cow->mouse AUC=0.4728 AUPR=0.4960 F1=0.0000 MCC=0.0000 thr=0.5000
+[RESULT] graphsage/strict_zero_shot cow->worm AUC=0.5725 AUPR=0.5681 F1=0.0000 MCC=0.0000 thr=0.5000
+[RESULT] graphsage/strict_zero_shot mouse->human AUC=0.5163 AUPR=0.5058 F1=0.6667 MCC=0.0000 thr=0.5000
+[RESULT] graphsage/strict_zero_shot mouse->cow AUC=0.5543 AUPR=0.5391 F1=0.6667 MCC=0.0000 thr=0.5000
+[RESULT] graphsage/strict_zero_shot mouse->mouse AUC=0.5457 AUPR=0.5296 F1=0.6667 MCC=0.0000 thr=0.5000
+[RESULT] graphsage/strict_zero_shot mouse->worm AUC=0.5251 AUPR=0.5270 F1=0.6667 MCC=0.0000 thr=0.5000
+[RESULT] graphsage/strict_zero_shot worm->human AUC=0.5392 AUPR=0.5199 F1=0.5844 MCC=0.0705 thr=0.5000
+[RESULT] graphsage/strict_zero_shot worm->cow AUC=0.5953 AUPR=0.5700 F1=0.4856 MCC=0.1157 thr=0.5000
+[RESULT] graphsage/strict_zero_shot worm->mouse AUC=0.5696 AUPR=0.5520 F1=0.6117 MCC=0.0967 thr=0.5000

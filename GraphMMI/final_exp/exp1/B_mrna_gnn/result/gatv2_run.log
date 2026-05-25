@@ -1,0 +1,79 @@
+[CONFIG] pair_feature_version=v3 dim=40
+[gatv2/strict_zero_shot/source/human] epoch=001 loss=0.7392 val_aupr=0.5512 val_auc=0.5471
+[gatv2/strict_zero_shot/source/human] epoch=002 loss=0.7386 val_aupr=0.5885 val_auc=0.5888
+[gatv2/strict_zero_shot/source/human] epoch=003 loss=0.7298 val_aupr=0.7093 val_auc=0.7130
+[gatv2/strict_zero_shot/source/human] epoch=007 loss=0.7038 val_aupr=0.7311 val_auc=0.7116
+[gatv2/strict_zero_shot/source/human] epoch=008 loss=0.6911 val_aupr=0.7687 val_auc=0.7596
+[gatv2/strict_zero_shot/source/human] epoch=009 loss=0.6843 val_aupr=0.7846 val_auc=0.7871
+[gatv2/strict_zero_shot/source/cow] epoch=001 loss=0.7110 val_aupr=0.7311 val_auc=0.7180
+[gatv2/strict_zero_shot/source/cow] epoch=002 loss=0.7014 val_aupr=0.7859 val_auc=0.7727
+[gatv2/strict_zero_shot/source/cow] epoch=003 loss=0.6889 val_aupr=0.8238 val_auc=0.8191
+[gatv2/strict_zero_shot/source/cow] epoch=004 loss=0.6803 val_aupr=0.8299 val_auc=0.8213
+[gatv2/strict_zero_shot/source/mouse] epoch=001 loss=0.7106 val_aupr=0.5921 val_auc=0.6029
+[gatv2/strict_zero_shot/source/mouse] epoch=002 loss=0.7378 val_aupr=0.6579 val_auc=0.6576
+[gatv2/strict_zero_shot/source/mouse] epoch=003 loss=0.7036 val_aupr=0.6653 val_auc=0.6824
+[gatv2/strict_zero_shot/source/mouse] epoch=005 loss=0.7097 val_aupr=0.6951 val_auc=0.7091
+[gatv2/strict_zero_shot/source/mouse] epoch=006 loss=0.7008 val_aupr=0.7697 val_auc=0.7762
+[gatv2/strict_zero_shot/source/mouse] epoch=007 loss=0.6841 val_aupr=0.8154 val_auc=0.8063
+[gatv2/strict_zero_shot/source/worm] epoch=001 loss=0.7098 val_aupr=0.5461 val_auc=0.5051
+[gatv2/strict_zero_shot/source/worm] epoch=002 loss=0.7287 val_aupr=0.8195 val_auc=0.7495
+[gatv2/strict_zero_shot/source/worm] epoch=006 loss=0.6873 val_aupr=0.8952 val_auc=0.8944
+[gatv2/strict_zero_shot/source/worm] epoch=007 loss=0.6842 val_aupr=0.9125 val_auc=0.8857
+[RESULT] gatv2/strict_zero_shot human->human AUC=0.8185 AUPR=0.8352 F1=0.2476 MCC=0.2593 thr=0.5000
+[RESULT] gatv2/strict_zero_shot human->cow AUC=0.8197 AUPR=0.8329 F1=0.2258 MCC=0.2438 thr=0.5000
+[RESULT] gatv2/strict_zero_shot human->mouse AUC=0.8087 AUPR=0.8126 F1=0.3077 MCC=0.2878 thr=0.5000
+[RESULT] gatv2/strict_zero_shot human->worm AUC=0.7557 AUPR=0.7735 F1=0.3950 MCC=0.3446 thr=0.5000
+[RESULT] gatv2/strict_zero_shot cow->human AUC=0.7591 AUPR=0.7807 F1=0.7048 MCC=0.3382 thr=0.5000
+[RESULT] gatv2/strict_zero_shot cow->cow AUC=0.8272 AUPR=0.8373 F1=0.7264 MCC=0.5160 thr=0.5000
+[RESULT] gatv2/strict_zero_shot cow->mouse AUC=0.7760 AUPR=0.7848 F1=0.7086 MCC=0.3907 thr=0.5000
+[RESULT] gatv2/strict_zero_shot cow->worm AUC=0.6828 AUPR=0.7134 F1=0.6166 MCC=0.2394 thr=0.5000
+[RESULT] gatv2/strict_zero_shot mouse->human AUC=0.7907 AUPR=0.7993 F1=0.3456 MCC=0.3063 thr=0.5000
+[RESULT] gatv2/strict_zero_shot mouse->cow AUC=0.7929 AUPR=0.8080 F1=0.2990 MCC=0.2961 thr=0.5000
+[RESULT] gatv2/strict_zero_shot mouse->mouse AUC=0.7857 AUPR=0.7920 F1=0.3650 MCC=0.3083 thr=0.5000
+[RESULT] gatv2/strict_zero_shot mouse->worm AUC=0.7262 AUPR=0.7418 F1=0.3902 MCC=0.2798 thr=0.5000
+[RESULT] gatv2/strict_zero_shot worm->human AUC=0.8406 AUPR=0.8598 F1=0.7458 MCC=0.4333 thr=0.5000
+[RESULT] gatv2/strict_zero_shot worm->cow AUC=0.8362 AUPR=0.8510 F1=0.7565 MCC=0.4680 thr=0.5000
+[RESULT] gatv2/strict_zero_shot worm->mouse AUC=0.8406 AUPR=0.8420 F1=0.7564 MCC=0.4557 thr=0.5000
+[RESULT] gatv2/strict_zero_shot worm->worm AUC=0.7969 AUPR=0.8044 F1=0.7441 MCC=0.4389 thr=0.5000
+[gatv2/calibrated_zero_shot/source/human] epoch=001 loss=0.7140 val_aupr=0.5443 val_auc=0.5036
+[gatv2/calibrated_zero_shot/source/human] epoch=002 loss=0.7604 val_aupr=0.5686 val_auc=0.5478
+[gatv2/calibrated_zero_shot/source/human] epoch=003 loss=0.7135 val_aupr=0.6878 val_auc=0.6817
+[gatv2/calibrated_zero_shot/source/human] epoch=006 loss=0.7076 val_aupr=0.7412 val_auc=0.7438
+[gatv2/calibrated_zero_shot/source/human] epoch=007 loss=0.6936 val_aupr=0.7943 val_auc=0.7962
+[gatv2/calibrated_zero_shot/source/human] epoch=008 loss=0.6891 val_aupr=0.8017 val_auc=0.8045
+[gatv2/calibrated_zero_shot/source/cow] epoch=001 loss=0.7233 val_aupr=0.5157 val_auc=0.5064
+[gatv2/calibrated_zero_shot/source/cow] epoch=002 loss=0.7323 val_aupr=0.5733 val_auc=0.5801
+[gatv2/calibrated_zero_shot/source/cow] epoch=003 loss=0.7119 val_aupr=0.7727 val_auc=0.7706
+[gatv2/calibrated_zero_shot/source/cow] epoch=006 loss=0.7022 val_aupr=0.8046 val_auc=0.7905
+[gatv2/calibrated_zero_shot/source/cow] epoch=007 loss=0.6900 val_aupr=0.8312 val_auc=0.8200
+[gatv2/calibrated_zero_shot/source/mouse] epoch=001 loss=0.7143 val_aupr=0.5673 val_auc=0.5365
+[gatv2/calibrated_zero_shot/source/mouse] epoch=002 loss=0.7292 val_aupr=0.5945 val_auc=0.5630
+[gatv2/calibrated_zero_shot/source/mouse] epoch=003 loss=0.7098 val_aupr=0.6953 val_auc=0.6765
+[gatv2/calibrated_zero_shot/source/mouse] epoch=007 loss=0.6911 val_aupr=0.7608 val_auc=0.7542
+[gatv2/calibrated_zero_shot/source/mouse] epoch=008 loss=0.6838 val_aupr=0.8294 val_auc=0.8136
+[gatv2/calibrated_zero_shot/source/mouse] epoch=009 loss=0.6809 val_aupr=0.8466 val_auc=0.8283
+[gatv2/calibrated_zero_shot/source/worm] epoch=001 loss=0.7859 val_aupr=0.5400 val_auc=0.4933
+[gatv2/calibrated_zero_shot/source/worm] epoch=002 loss=0.7047 val_aupr=0.6685 val_auc=0.6553
+[gatv2/calibrated_zero_shot/source/worm] epoch=003 loss=0.7250 val_aupr=0.6884 val_auc=0.6692
+[gatv2/calibrated_zero_shot/source/worm] epoch=004 loss=0.7310 val_aupr=0.7264 val_auc=0.7166
+[gatv2/calibrated_zero_shot/source/worm] epoch=005 loss=0.7057 val_aupr=0.8562 val_auc=0.8528
+[gatv2/calibrated_zero_shot/source/worm] epoch=006 loss=0.6854 val_aupr=0.8858 val_auc=0.8484
+[gatv2/calibrated_zero_shot/source/worm] epoch=011 loss=0.6830 val_aupr=0.8930 val_auc=0.8668
+[gatv2/calibrated_zero_shot/source/worm] epoch=012 loss=0.6724 val_aupr=0.8995 val_auc=0.8798
+[RESULT] gatv2/calibrated_zero_shot human->human AUC=0.8215 AUPR=0.8316 F1=0.7509 MCC=0.4651 thr=0.5487
+[RESULT] gatv2/calibrated_zero_shot human->cow AUC=0.8098 AUPR=0.8205 F1=0.7394 MCC=0.4442 thr=0.5491
+[RESULT] gatv2/calibrated_zero_shot human->mouse AUC=0.8016 AUPR=0.8175 F1=0.6171 MCC=0.4493 thr=0.5631
+[RESULT] gatv2/calibrated_zero_shot human->worm AUC=0.7749 AUPR=0.7883 F1=0.7006 MCC=0.4392 thr=0.5577
+[RESULT] gatv2/calibrated_zero_shot cow->human AUC=0.7621 AUPR=0.7807 F1=0.5501 MCC=0.3889 thr=0.5144
+[RESULT] gatv2/calibrated_zero_shot cow->cow AUC=0.8067 AUPR=0.8268 F1=0.7016 MCC=0.4948 thr=0.5034
+[RESULT] gatv2/calibrated_zero_shot cow->mouse AUC=0.7739 AUPR=0.7786 F1=0.7074 MCC=0.3863 thr=0.4986
+[RESULT] gatv2/calibrated_zero_shot cow->worm AUC=0.6856 AUPR=0.7108 F1=0.5304 MCC=0.2315 thr=0.5081
+[RESULT] gatv2/calibrated_zero_shot mouse->human AUC=0.8091 AUPR=0.8317 F1=0.6780 MCC=0.4952 thr=0.4663
+[RESULT] gatv2/calibrated_zero_shot mouse->cow AUC=0.8121 AUPR=0.8334 F1=0.7047 MCC=0.4521 thr=0.4602
+[RESULT] gatv2/calibrated_zero_shot mouse->mouse AUC=0.7967 AUPR=0.8046 F1=0.7107 MCC=0.4531 thr=0.4626
+[RESULT] gatv2/calibrated_zero_shot mouse->worm AUC=0.7494 AUPR=0.7613 F1=0.6836 MCC=0.4071 thr=0.4617
+[RESULT] gatv2/calibrated_zero_shot worm->human AUC=0.8232 AUPR=0.8423 F1=0.7542 MCC=0.4783 thr=0.4909
+[RESULT] gatv2/calibrated_zero_shot worm->cow AUC=0.8205 AUPR=0.8453 F1=0.7063 MCC=0.5287 thr=0.5046
+[RESULT] gatv2/calibrated_zero_shot worm->mouse AUC=0.8109 AUPR=0.8212 F1=0.7392 MCC=0.4400 thr=0.4938
+[RESULT] gatv2/calibrated_zero_shot worm->worm AUC=0.7775 AUPR=0.7851 F1=0.7026 MCC=0.3840 thr=0.4972
+Saved GNN transfer run to: /mnt/d/Projects/GProject/GraphMMI/final_exp/exp1/B_mrna_gnn/result/20260518-000513

@@ -1,0 +1,5 @@
+encoder,setting,aupr_mean,aupr_diag_mean,aupr_cross_species_mean,auc_mean,f1_mean,mcc_mean
+graphsage,source_only,0.8439,0.8499,0.8419,0.8330,0.5378,0.4045
+graphsage,transfer,0.8433,0.8414,0.8440,0.8411,0.7444,0.5084
+gatv2,source_only,0.8195,0.8344,0.8145,0.8124,0.5892,0.4059
+gatv2,transfer,0.8415,0.8376,0.8428,0.8360,0.7192,0.5045

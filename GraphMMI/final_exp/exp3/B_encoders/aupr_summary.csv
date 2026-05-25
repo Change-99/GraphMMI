@@ -1,0 +1,3 @@
+encoder,aupr_L1,aupr_L2,aupr_L3,aupr_L4,aupr_L5,aupr_L6,best_aupr_layer,best_aupr,auc_L1,auc_L2,auc_L3,auc_L4,auc_L5,auc_L6,best_auc_layer,best_auc
+gatv2,0.8392,0.8662,0.8678,0.8555,0.8483,0.8569,L3,0.8678,0.8295,0.8633,0.8596,0.8512,0.8485,0.8507,L2,0.8633
+graphsage,0.8195,0.8558,0.8568,0.8595,0.8466,0.8552,L4,0.8595,0.8081,0.8540,0.8529,0.8563,0.8453,0.8488,L4,0.8563

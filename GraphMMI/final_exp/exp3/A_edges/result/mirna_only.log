@@ -1,0 +1,23 @@
+[CONFIG] pair_feature_version=v3 dim=40
+[graphsage/finetune/source/human] epoch=001 loss=0.7111 val_aupr=0.5599 val_auc=0.5616
+[graphsage/finetune/source/human] epoch=002 loss=0.7319 val_aupr=0.6148 val_auc=0.6176
+[graphsage/finetune/source/human] epoch=003 loss=0.7052 val_aupr=0.8280 val_auc=0.8048
+[graphsage/finetune/source/human] epoch=007 loss=0.6874 val_aupr=0.8427 val_auc=0.8292
+[graphsage/finetune/source/cow] epoch=001 loss=0.7074 val_aupr=0.6189 val_auc=0.5975
+[graphsage/finetune/source/cow] epoch=002 loss=0.7081 val_aupr=0.8220 val_auc=0.8019
+[graphsage/finetune/source/cow] epoch=003 loss=0.6987 val_aupr=0.8240 val_auc=0.7992
+[graphsage/finetune/finetune/human->human] epoch=001 loss=0.6812 val_aupr=0.8007 val_auc=0.7904
+[graphsage/finetune/finetune/human->human] epoch=002 loss=0.6781 val_aupr=0.8349 val_auc=0.8214
+[RESULT] graphsage/finetune human->human AUC=0.8186 AUPR=0.8227 F1=0.7001 MCC=0.4929 thr=0.4935
+[graphsage/finetune/finetune/human->cow] epoch=001 loss=0.6778 val_aupr=0.8419 val_auc=0.8220
+[graphsage/finetune/finetune/human->cow] epoch=002 loss=0.6739 val_aupr=0.8467 val_auc=0.8280
+[RESULT] graphsage/finetune human->cow AUC=0.8001 AUPR=0.8229 F1=0.7247 MCC=0.4980 thr=0.4845
+[graphsage/finetune/finetune/cow->human] epoch=001 loss=0.6911 val_aupr=0.7232 val_auc=0.7170
+[graphsage/finetune/finetune/cow->human] epoch=002 loss=0.6883 val_aupr=0.8031 val_auc=0.7892
+[graphsage/finetune/finetune/cow->human] epoch=003 loss=0.6849 val_aupr=0.8193 val_auc=0.8046
+[RESULT] graphsage/finetune cow->human AUC=0.8011 AUPR=0.8061 F1=0.6559 MCC=0.4711 thr=0.5228
+[graphsage/finetune/finetune/cow->cow] epoch=001 loss=0.6878 val_aupr=0.7860 val_auc=0.7633
+[graphsage/finetune/finetune/cow->cow] epoch=002 loss=0.6847 val_aupr=0.8189 val_auc=0.7982
+[graphsage/finetune/finetune/cow->cow] epoch=003 loss=0.6779 val_aupr=0.8321 val_auc=0.8184
+[RESULT] graphsage/finetune cow->cow AUC=0.8015 AUPR=0.8129 F1=0.6945 MCC=0.4934 thr=0.5178
+Saved GNN transfer run to: /mnt/d/Projects/GProject/GraphMMI/final_exp/exp3/A_edges/result/20260519-011821

@@ -1,15 +1,112 @@
-[CONFIG] pair_feature_version=v3 dim=40
-[graphsage/strict_zero_shot/source/human] epoch=001 loss=0.6971 val_aupr=0.5638 val_auc=0.5718
-[graphsage/strict_zero_shot/source/human] epoch=002 loss=0.7222 val_aupr=0.7710 val_auc=0.7554
-[graphsage/strict_zero_shot/source/human] epoch=003 loss=0.6908 val_aupr=0.7903 val_auc=0.7560
-[graphsage/strict_zero_shot/source/human] epoch=005 loss=0.6971 val_aupr=0.8281 val_auc=0.8049
-[graphsage/strict_zero_shot/source/human] epoch=006 loss=0.6876 val_aupr=0.8607 val_auc=0.8477
-[graphsage/strict_zero_shot/source/human] epoch=012 loss=0.6623 val_aupr=0.8617 val_auc=0.8488
-[graphsage/strict_zero_shot/source/human] epoch=018 loss=0.6344 val_aupr=0.8630 val_auc=0.8506
-[graphsage/strict_zero_shot/source/human] epoch=019 loss=0.6220 val_aupr=0.8649 val_auc=0.8544
-[graphsage/strict_zero_shot/source/human] epoch=020 loss=0.6151 val_aupr=0.8669 val_auc=0.8582
-[graphsage/strict_zero_shot/source/human] epoch=021 loss=0.6050 val_aupr=0.8695 val_auc=0.8622
-[RESULT] graphsage/strict_zero_shot human->human AUC=0.8589 AUPR=0.8687 F1=0.7494 MCC=0.5673 thr=0.5000
-[graphsage/finetune/source/human] epoch=001 loss=0.7107 val_aupr=0.5407 val_auc=0.5418
-[graphsage/finetune/source/human] epoch=002 loss=0.7317 val_aupr=0.6019 val_auc=0.6051
-[graphsage/finetune/source/human] epoch=003 loss=0.7053 val_aupr=0.8171 val_auc=0.7985
+[graphsage/strict_zero_shot/source/human] epoch=001 loss=0.6978 val_aupr=0.5833 val_auc=0.5808
+[graphsage/strict_zero_shot/source/human] epoch=002 loss=0.7255 val_aupr=0.7049 val_auc=0.6890
+[graphsage/strict_zero_shot/source/human] epoch=003 loss=0.6896 val_aupr=0.8331 val_auc=0.8152
+[graphsage/strict_zero_shot/source/human] epoch=005 loss=0.6956 val_aupr=0.8553 val_auc=0.8467
+[graphsage/strict_zero_shot/source/human] epoch=006 loss=0.6869 val_aupr=0.8558 val_auc=0.8416
+[graphsage/strict_zero_shot/source/cow] epoch=001 loss=0.6975 val_aupr=0.5974 val_auc=0.5999
+[graphsage/strict_zero_shot/source/cow] epoch=002 loss=0.7073 val_aupr=0.8288 val_auc=0.8078
+[graphsage/strict_zero_shot/source/cow] epoch=003 loss=0.6911 val_aupr=0.8434 val_auc=0.8196
+[graphsage/strict_zero_shot/source/cow] epoch=004 loss=0.6921 val_aupr=0.8522 val_auc=0.8297
+[graphsage/strict_zero_shot/source/cow] epoch=005 loss=0.6901 val_aupr=0.8923 val_auc=0.8793
+[graphsage/strict_zero_shot/source/cow] epoch=006 loss=0.6809 val_aupr=0.9040 val_auc=0.8928
+[graphsage/strict_zero_shot/source/mouse] epoch=001 loss=0.7035 val_aupr=0.5548 val_auc=0.5388
+[graphsage/strict_zero_shot/source/mouse] epoch=002 loss=0.7253 val_aupr=0.6939 val_auc=0.6632
+[graphsage/strict_zero_shot/source/mouse] epoch=005 loss=0.7010 val_aupr=0.7337 val_auc=0.7283
+[graphsage/strict_zero_shot/source/mouse] epoch=006 loss=0.6912 val_aupr=0.8156 val_auc=0.8131
+[graphsage/strict_zero_shot/source/mouse] epoch=007 loss=0.6795 val_aupr=0.8407 val_auc=0.8396
+[graphsage/strict_zero_shot/source/worm] epoch=001 loss=0.7099 val_aupr=0.4723 val_auc=0.4688
+[graphsage/strict_zero_shot/source/worm] epoch=002 loss=0.7197 val_aupr=0.5083 val_auc=0.5290
+[graphsage/strict_zero_shot/source/worm] epoch=003 loss=0.7027 val_aupr=0.7018 val_auc=0.6939
+[graphsage/strict_zero_shot/source/worm] epoch=006 loss=0.6989 val_aupr=0.7496 val_auc=0.7224
+[graphsage/strict_zero_shot/source/worm] epoch=007 loss=0.6884 val_aupr=0.8675 val_auc=0.8499
+[RESULT] graphsage/strict_zero_shot human->human AUC=0.8397 AUPR=0.8452 F1=0.7672 MCC=0.4988 thr=0.5000
+[RESULT] graphsage/strict_zero_shot human->cow AUC=0.8564 AUPR=0.8725 F1=0.7444 MCC=0.4194 thr=0.5000
+[RESULT] graphsage/strict_zero_shot human->mouse AUC=0.8148 AUPR=0.8385 F1=0.7288 MCC=0.3942 thr=0.5000
+[RESULT] graphsage/strict_zero_shot human->worm AUC=0.7989 AUPR=0.7953 F1=0.7308 MCC=0.3763 thr=0.5000
+[RESULT] graphsage/strict_zero_shot cow->human AUC=0.8422 AUPR=0.8515 F1=0.6374 MCC=0.5056 thr=0.5000
+[RESULT] graphsage/strict_zero_shot cow->cow AUC=0.8790 AUPR=0.8865 F1=0.6906 MCC=0.5583 thr=0.5000
+[RESULT] graphsage/strict_zero_shot cow->mouse AUC=0.8405 AUPR=0.8544 F1=0.6083 MCC=0.4851 thr=0.5000
+[RESULT] graphsage/strict_zero_shot cow->worm AUC=0.8068 AUPR=0.8081 F1=0.6436 MCC=0.4686 thr=0.5000
+[RESULT] graphsage/strict_zero_shot mouse->human AUC=0.8405 AUPR=0.8496 F1=0.1732 MCC=0.2122 thr=0.5000
+[RESULT] graphsage/strict_zero_shot mouse->cow AUC=0.8685 AUPR=0.8750 F1=0.2147 MCC=0.2440 thr=0.5000
+[RESULT] graphsage/strict_zero_shot mouse->mouse AUC=0.8376 AUPR=0.8460 F1=0.1728 MCC=0.2172 thr=0.5000
+[RESULT] graphsage/strict_zero_shot mouse->worm AUC=0.8038 AUPR=0.8177 F1=0.1376 MCC=0.1959 thr=0.5000
+[RESULT] graphsage/strict_zero_shot worm->human AUC=0.8267 AUPR=0.8379 F1=0.5478 MCC=0.4440 thr=0.5000
+[RESULT] graphsage/strict_zero_shot worm->cow AUC=0.8548 AUPR=0.8702 F1=0.6844 MCC=0.5542 thr=0.5000
+[RESULT] graphsage/strict_zero_shot worm->mouse AUC=0.8072 AUPR=0.8322 F1=0.5471 MCC=0.4458 thr=0.5000
+[RESULT] graphsage/strict_zero_shot worm->worm AUC=0.8111 AUPR=0.8220 F1=0.5759 MCC=0.4529 thr=0.5000
+[graphsage/finetune/source/human] epoch=001 loss=0.7010 val_aupr=0.5521 val_auc=0.5474
+[graphsage/finetune/source/human] epoch=002 loss=0.7272 val_aupr=0.6010 val_auc=0.5890
+[graphsage/finetune/source/human] epoch=003 loss=0.6982 val_aupr=0.7931 val_auc=0.7791
+[graphsage/finetune/source/human] epoch=004 loss=0.6943 val_aupr=0.8356 val_auc=0.8186
+[graphsage/finetune/source/human] epoch=005 loss=0.6999 val_aupr=0.8477 val_auc=0.8337
+[graphsage/finetune/source/human] epoch=006 loss=0.6942 val_aupr=0.8496 val_auc=0.8377
+[graphsage/finetune/source/cow] epoch=001 loss=0.7070 val_aupr=0.6286 val_auc=0.6112
+[graphsage/finetune/source/cow] epoch=002 loss=0.7072 val_aupr=0.8067 val_auc=0.7765
+[graphsage/finetune/source/cow] epoch=003 loss=0.6966 val_aupr=0.8247 val_auc=0.8029
+[graphsage/finetune/source/cow] epoch=005 loss=0.6843 val_aupr=0.8488 val_auc=0.8338
+[graphsage/finetune/source/cow] epoch=006 loss=0.6796 val_aupr=0.8846 val_auc=0.8767
+[graphsage/finetune/source/mouse] epoch=001 loss=0.7014 val_aupr=0.5768 val_auc=0.5614
+[graphsage/finetune/source/mouse] epoch=002 loss=0.7205 val_aupr=0.7422 val_auc=0.7225
+[graphsage/finetune/source/mouse] epoch=005 loss=0.6967 val_aupr=0.7579 val_auc=0.7677
+[graphsage/finetune/source/mouse] epoch=006 loss=0.6861 val_aupr=0.8448 val_auc=0.8463
+[graphsage/finetune/source/worm] epoch=001 loss=0.7089 val_aupr=0.5038 val_auc=0.5107
+[graphsage/finetune/source/worm] epoch=002 loss=0.7235 val_aupr=0.5530 val_auc=0.5418
+[graphsage/finetune/source/worm] epoch=005 loss=0.7017 val_aupr=0.5541 val_auc=0.5745
+[graphsage/finetune/source/worm] epoch=006 loss=0.6977 val_aupr=0.6213 val_auc=0.6477
+[graphsage/finetune/source/worm] epoch=007 loss=0.6949 val_aupr=0.7589 val_auc=0.7483
+[graphsage/finetune/finetune/human->human] epoch=001 loss=0.6860 val_aupr=0.7409 val_auc=0.7262
+[graphsage/finetune/finetune/human->human] epoch=002 loss=0.6839 val_aupr=0.7753 val_auc=0.7607
+[graphsage/finetune/finetune/human->human] epoch=003 loss=0.6795 val_aupr=0.8355 val_auc=0.8233
+[graphsage/finetune/finetune/human->human] epoch=004 loss=0.6743 val_aupr=0.8653 val_auc=0.8558
+[graphsage/finetune/finetune/human->human] epoch=005 loss=0.6703 val_aupr=0.8684 val_auc=0.8598
+[RESULT] graphsage/finetune human->human AUC=0.8552 AUPR=0.8564 F1=0.7659 MCC=0.5587 thr=0.5147
+[graphsage/finetune/finetune/human->cow] epoch=001 loss=0.6828 val_aupr=0.8346 val_auc=0.8114
+[graphsage/finetune/finetune/human->cow] epoch=002 loss=0.6794 val_aupr=0.8482 val_auc=0.8280
+[graphsage/finetune/finetune/human->cow] epoch=003 loss=0.6741 val_aupr=0.8706 val_auc=0.8559
+[graphsage/finetune/finetune/human->cow] epoch=004 loss=0.6681 val_aupr=0.8851 val_auc=0.8751
+[graphsage/finetune/finetune/human->cow] epoch=005 loss=0.6619 val_aupr=0.8892 val_auc=0.8812
+[RESULT] graphsage/finetune human->cow AUC=0.8704 AUPR=0.8788 F1=0.7732 MCC=0.5858 thr=0.5137
+[graphsage/finetune/finetune/human->mouse] epoch=001 loss=0.6868 val_aupr=0.7214 val_auc=0.6940
+[graphsage/finetune/finetune/human->mouse] epoch=002 loss=0.6842 val_aupr=0.7545 val_auc=0.7317
+[graphsage/finetune/finetune/human->mouse] epoch=003 loss=0.6808 val_aupr=0.7998 val_auc=0.7868
+[graphsage/finetune/finetune/human->mouse] epoch=004 loss=0.6746 val_aupr=0.8319 val_auc=0.8284
+[graphsage/finetune/finetune/human->mouse] epoch=005 loss=0.6693 val_aupr=0.8430 val_auc=0.8434
+[RESULT] graphsage/finetune human->mouse AUC=0.8519 AUPR=0.8607 F1=0.7586 MCC=0.5064 thr=0.5114
+[graphsage/finetune/finetune/human->worm] epoch=001 loss=0.6865 val_aupr=0.7066 val_auc=0.6837
+[graphsage/finetune/finetune/human->worm] epoch=002 loss=0.6812 val_aupr=0.7168 val_auc=0.6946
+[graphsage/finetune/finetune/human->worm] epoch=003 loss=0.6834 val_aupr=0.7535 val_auc=0.7443
+[graphsage/finetune/finetune/human->worm] epoch=004 loss=0.6802 val_aupr=0.8072 val_auc=0.8101
+[graphsage/finetune/finetune/human->worm] epoch=005 loss=0.6744 val_aupr=0.8465 val_auc=0.8520
+[RESULT] graphsage/finetune human->worm AUC=0.8275 AUPR=0.8152 F1=0.7478 MCC=0.4644 thr=0.5062
+[graphsage/finetune/finetune/cow->human] epoch=001 loss=0.6769 val_aupr=0.8525 val_auc=0.8423
+[RESULT] graphsage/finetune cow->human AUC=0.8320 AUPR=0.8370 F1=0.7249 MCC=0.5015 thr=0.4572
+[graphsage/finetune/finetune/cow->cow] epoch=001 loss=0.6672 val_aupr=0.8835 val_auc=0.8745
+[RESULT] graphsage/finetune cow->cow AUC=0.8647 AUPR=0.8698 F1=0.7544 MCC=0.5471 thr=0.4694
+[graphsage/finetune/finetune/cow->mouse] epoch=001 loss=0.6715 val_aupr=0.8294 val_auc=0.8320
+[RESULT] graphsage/finetune cow->mouse AUC=0.8309 AUPR=0.8378 F1=0.7465 MCC=0.4756 thr=0.4529
+[graphsage/finetune/finetune/cow->worm] epoch=001 loss=0.6752 val_aupr=0.8102 val_auc=0.7965
+[RESULT] graphsage/finetune cow->worm AUC=0.7996 AUPR=0.7966 F1=0.7246 MCC=0.4012 thr=0.4446
+[graphsage/finetune/finetune/mouse->human] epoch=001 loss=0.6800 val_aupr=0.8475 val_auc=0.8407
+[graphsage/finetune/finetune/mouse->human] epoch=002 loss=0.6735 val_aupr=0.8666 val_auc=0.8594
+[RESULT] graphsage/finetune mouse->human AUC=0.8553 AUPR=0.8605 F1=0.7524 MCC=0.5468 thr=0.4682
+[graphsage/finetune/finetune/mouse->cow] epoch=001 loss=0.6751 val_aupr=0.8976 val_auc=0.8927
+[RESULT] graphsage/finetune mouse->cow AUC=0.8828 AUPR=0.8830 F1=0.7981 MCC=0.5910 thr=0.5043
+[graphsage/finetune/finetune/mouse->mouse] epoch=001 loss=0.6787 val_aupr=0.8190 val_auc=0.8345
+[graphsage/finetune/finetune/mouse->mouse] epoch=002 loss=0.6719 val_aupr=0.8392 val_auc=0.8447
+[RESULT] graphsage/finetune mouse->mouse AUC=0.8432 AUPR=0.8472 F1=0.7394 MCC=0.5023 thr=0.4836
+[graphsage/finetune/finetune/mouse->worm] epoch=001 loss=0.6788 val_aupr=0.7817 val_auc=0.7781
+[graphsage/finetune/finetune/mouse->worm] epoch=002 loss=0.6746 val_aupr=0.8233 val_auc=0.8125
+[RESULT] graphsage/finetune mouse->worm AUC=0.8136 AUPR=0.8114 F1=0.7399 MCC=0.4318 thr=0.4606
+[graphsage/finetune/finetune/worm->human] epoch=001 loss=0.6866 val_aupr=0.8424 val_auc=0.8365
+[graphsage/finetune/finetune/worm->human] epoch=002 loss=0.6830 val_aupr=0.8494 val_auc=0.8421
+[RESULT] graphsage/finetune worm->human AUC=0.8332 AUPR=0.8384 F1=0.7209 MCC=0.5116 thr=0.4957
+[graphsage/finetune/finetune/worm->cow] epoch=001 loss=0.6843 val_aupr=0.8817 val_auc=0.8721
+[RESULT] graphsage/finetune worm->cow AUC=0.8652 AUPR=0.8727 F1=0.7586 MCC=0.5658 thr=0.4974
+[graphsage/finetune/finetune/worm->mouse] epoch=001 loss=0.6870 val_aupr=0.8190 val_auc=0.8246
+[graphsage/finetune/finetune/worm->mouse] epoch=002 loss=0.6818 val_aupr=0.8245 val_auc=0.8303
+[RESULT] graphsage/finetune worm->mouse AUC=0.8323 AUPR=0.8357 F1=0.7265 MCC=0.4902 thr=0.4963
+[graphsage/finetune/finetune/worm->worm] epoch=001 loss=0.6861 val_aupr=0.7769 val_auc=0.7640
+[graphsage/finetune/finetune/worm->worm] epoch=002 loss=0.6836 val_aupr=0.7771 val_auc=0.7642
+[RESULT] graphsage/finetune worm->worm AUC=0.8000 AUPR=0.7924 F1=0.6781 MCC=0.4540 thr=0.4964
+Saved GNN transfer run to: /content/GraphMMI/GraphMMI/final_exp/exp2/result/20260518-170917

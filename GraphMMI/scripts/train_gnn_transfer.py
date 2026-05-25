@@ -139,8 +139,10 @@ def parse_args() -> argparse.Namespace:
                         help="Use miRNA-miRNA similarity edges in message passing.")
     parser.add_argument("--mrna-sim-edges", action="store_true",
                         help="Use mRNA-mRNA similarity edges in message passing.")
-    parser.add_argument("--mirna-sim-topk", type=int, default=5)
-    parser.add_argument("--mrna-sim-topk", type=int, default=5)
+    parser.add_argument("--mirna-sim-topk", type=int, default=5,
+                        help="DEPRECATED in training. Top-k is set during preprocessing (final_embedding.py).")
+    parser.add_argument("--mrna-sim-topk", type=int, default=5,
+                        help="DEPRECATED in training. Top-k is set during preprocessing (final_embedding.py).")
     parser.add_argument("--no-heatmaps", action="store_true", help="Skip heatmap generation.")
     return parser.parse_args()
 
@@ -240,7 +242,7 @@ def build_model(
 ) -> GraphMMILinkPredictor:
     id_dim, species_dim = embedding_dims_for_setting(args, setting)
     edge_attr_dim = _pair_feature_dim_for_version(args.pair_feature_version) if args.edge_attr_mode == "pair" else 0
-    use_edge_weight = (encoder == "gatv2") and (args.mirna_sim_edges or args.mrna_sim_edges)
+    use_edge_weight = args.mirna_sim_edges or args.mrna_sim_edges
     return GraphMMILinkPredictor(
         encoder_name=encoder,
         num_numeric_features=int(graph.x.size(1)),
@@ -292,6 +294,9 @@ def _load_pretrained_encoder(model, ckpt_path, species, device):
         return
     ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
     source_state = ckpt.get("encoder_state_dict") or ckpt.get("model_state_dict") or ckpt
+    # Only load encoder weights (input_encoder + gnn), skip decoder
+    source_state = {k: v for k, v in source_state.items()
+                    if k.startswith("input_encoder.") or k.startswith("gnn.")}
     state = compatible_state_dict(source_state, model)
     missing, unexpected = model.load_state_dict(state, strict=False)
     encoder_missing = [k for k in missing if not k.startswith("decoder.")]
@@ -579,6 +584,10 @@ def build_batch(
         dim=0,
     )
     edge_attr = pair_feature_matrix(edge_label_index, graph, version=edge_attr_version) if edge_attr_mode == "pair" else None
+    if edge_attr is not None and edge_attr_version == "v3":
+        assert edge_attr.size(1) == 40, f"v3 pair dim mismatch: {edge_attr.size(1)} != 40"
+    if edge_attr is not None and edge_attr_version == "v2":
+        assert edge_attr.size(1) == 28, f"v2 pair dim mismatch: {edge_attr.size(1)} != 28"
     order = torch.randperm(labels.numel(), device=labels.device)
     edge_label_index = edge_label_index[:, order]
     labels = labels[order]
@@ -679,6 +688,20 @@ def train_on_graph(
 
     for epoch in range(1, epochs + 1):
         model.train()
+        # Curriculum: ramp sequence-aware negatives by training length.
+        # This keeps short fine-tuning runs from spending almost all epochs on
+        # endpoint_corrupt negatives while preserving the old 40-epoch schedule.
+        if args.neg_strategy == "sequence_aware":
+            warmup_epochs = max(1, int(round(epochs * 0.25)))
+            mixed_epochs = max(warmup_epochs + 1, int(round(epochs * 0.65)))
+            if epoch <= warmup_epochs:
+                cur_strategy = "endpoint_corrupt"
+            elif epoch <= mixed_epochs:
+                cur_strategy = "sequence_aware" if epoch % 2 == 0 else "endpoint_corrupt"
+            else:
+                cur_strategy = "sequence_aware"
+        else:
+            cur_strategy = args.neg_strategy
         edge_label_index, labels, edge_attr = build_batch(
             graph,
             split="train",
@@ -686,7 +709,7 @@ def train_on_graph(
             seed=stable_seed(seed, phase, species, str(epoch)),
             edge_attr_mode=args.edge_attr_mode,
             device=device,
-            neg_strategy=args.neg_strategy,
+            neg_strategy=cur_strategy,
             edge_attr_version=args.pair_feature_version,
         )
         optimizer.zero_grad(set_to_none=True)
@@ -1051,11 +1074,15 @@ def main() -> None:
     if args.use_edge_attr:
         args.edge_attr_mode = "pair"
     set_seed(args.seed)
-    if not args.skip_preprocess and not args.refresh_fixed_negatives:
-        print("[WARN] --skip-preprocess not set; may auto-run old preprocessing script.")
-        print("[WARN] Use --skip-preprocess --refresh-fixed-negatives for final experiments.")
+    if not args.skip_preprocess:
+        raise RuntimeError(
+            "For final experiments, run final_embedding.py manually first, "
+            "then pass --skip-preprocess.  The built-in ensure_preprocessed() "
+            "runs the OLD preprocess_graph_data.py, not final_embedding.py.")
     ensure_preprocessed(args)
 
+    print(f"[CONFIG] pair_feature_version={args.pair_feature_version} "
+          f"dim={_pair_feature_dim_for_version(args.pair_feature_version)}", flush=True)
     run_dir = args.run_root / time.strftime("%Y%m%d-%H%M%S")
     run_dir.mkdir(parents=True, exist_ok=True)
     (run_dir / "config.json").write_text(json.dumps(json_safe(vars(args)), indent=2), encoding="utf-8")

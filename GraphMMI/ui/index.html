@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>GraphMMI miRNA-mRNA Prediction System</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#main">跳转到主内容</a>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="系统导航">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">G</div>
+          <div>
+            <p class="eyebrow">GraphMMI</p>
+            <h1>miRNA-mRNA 预测系统</h1>
+          </div>
+        </div>
+        <nav class="nav-list">
+          <a href="#overview" class="nav-link active">系统总览</a>
+          <a href="#datasets" class="nav-link">数据管理</a>
+          <a href="#training" class="nav-link">模型训练</a>
+          <a href="#results" class="nav-link">实验结果</a>
+          <a href="#visualization" class="nav-link">热力图与趋势</a>
+          <a href="#prediction" class="nav-link">相互作用预测</a>
+          <a href="#api" class="nav-link">接口与存储</a>
+        </nav>
+        <div class="status-panel">
+          <span class="status-dot"></span>
+          <div>
+            <strong>本地实验服务</strong>
+            <span>使用 ui/server.py 启动后可调度训练</span>
+          </div>
+        </div>
+      </aside>
+
+      <main id="main" class="content">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">4.6 系统设计与实现</p>
+            <h2>科研实验展示与预测工作台</h2>
+          </div>
+          <div class="topbar-actions">
+            <button class="ghost-button" type="button" data-scroll="#api">查看 API</button>
+            <button class="primary-button" type="button" data-scroll="#training">创建实验</button>
+          </div>
+        </header>
+
+        <section id="overview" class="section hero-workspace">
+          <div class="hero-copy">
+            <p class="eyebrow">需求定位</p>
+            <h2>统一组织数据处理、模型训练、结果保存与可视化展示</h2>
+            <p>
+              系统围绕 human、cow、mouse、worm 多物种数据管理，GraphSAGE/GATv2 图模型训练，
+              跨物种迁移实验分析，预测结果查询和热力图展示构建，服务于模型调参、结果复现和实验对比。
+            </p>
+            <div class="hero-actions">
+              <button class="primary-button" type="button" data-scroll="#results">查看当前最优结果</button>
+              <button class="secondary-button" type="button" data-scroll="#prediction">进入预测演示</button>
+            </div>
+          </div>
+          <div class="pipeline" aria-label="系统技术路线">
+            <div class="pipeline-node">
+              <span>01</span>
+              <strong>数据输入</strong>
+              <small>多物种样本与序列特征</small>
+            </div>
+            <div class="pipeline-node">
+              <span>02</span>
+              <strong>图构建</strong>
+              <small>target site 图与相似边</small>
+            </div>
+            <div class="pipeline-node">
+              <span>03</span>
+              <strong>模型训练</strong>
+              <small>GraphSAGE / GATv2</small>
+            </div>
+            <div class="pipeline-node">
+              <span>04</span>
+              <strong>结果可视化</strong>
+              <small>AUPR、AUC 与热力图</small>
+            </div>
+          </div>
+        </section>
+
+        <section class="metric-grid" aria-label="系统关键指标">
+          <article class="metric-card">
+            <span>数据物种数</span>
+            <strong>4</strong>
+            <small>human / cow / mouse / worm</small>
+          </article>
+          <article class="metric-card">
+            <span>图模型数量</span>
+            <strong>2</strong>
+            <small>GraphSAGE 与 GATv2</small>
+          </article>
+          <article class="metric-card">
+            <span>最高 AUPR</span>
+            <strong>0.8727</strong>
+            <small>decoder baseline, human</small>
+          </article>
+          <article class="metric-card">
+            <span>最佳跨物种 AUPR</span>
+            <strong>0.8653</strong>
+            <small>both-sim edge ablation</small>
+          </article>
+        </section>
+
+        <section id="datasets" class="section">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Data Management</p>
+              <h2>多物种数据管理</h2>
+            </div>
+            <p>展示样本、节点、target site、图输入文件和预处理状态，支撑论文中的数据管理需求。</p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>物种</th>
+                  <th>样本规模</th>
+                  <th>miRNA 节点</th>
+                  <th>target site 节点</th>
+                  <th>相互作用边</th>
+                  <th>图数据状态</th>
+                </tr>
+              </thead>
+              <tbody id="datasetRows"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="training" class="section split-section">
+          <div class="panel">
+            <div class="section-heading compact">
+              <div>
+                <p class="eyebrow">Experiment Builder</p>
+                <h2>实验配置</h2>
+              </div>
+            </div>
+            <form class="config-form" id="experimentForm">
+              <label>
+                模型类型
+                <select name="model">
+                  <option>GraphSAGE</option>
+                  <option>GATv2</option>
+                  <option>ANN</option>
+                  <option>XGBoost</option>
+                </select>
+              </label>
+              <label>
+                源物种
+                <select name="source">
+                  <option>human</option>
+                  <option>cow</option>
+                  <option>mouse</option>
+                  <option>worm</option>
+                </select>
+              </label>
+              <label>
+                目标物种
+                <select name="target">
+                  <option>mouse</option>
+                  <option>human</option>
+                  <option>cow</option>
+                  <option>worm</option>
+                </select>
+              </label>
+              <label>
+                实验设置
+                <select name="setting">
+                  <option>transfer</option>
+                  <option>source_only</option>
+                </select>
+              </label>
+              <label>
+                相似边设置
+                <select name="sim">
+                  <option>both-sim</option>
+                  <option>target-only</option>
+                  <option>miRNA-only</option>
+                  <option>no-sim</option>
+                </select>
+              </label>
+              <label>
+                encoder 层数
+                <input name="layers" type="number" min="1" max="6" value="4">
+              </label>
+              <label>
+                decoder 类型
+                <select name="decoder">
+                  <option>baseline</option>
+                  <option>residual</option>
+                  <option>gated</option>
+                  <option>bilinear</option>
+                  <option>separated</option>
+                </select>
+              </label>
+              <label>
+                负采样策略
+                <select name="negative">
+                  <option>endpoint_corrupt</option>
+                  <option>degree_aware</option>
+                  <option>sequence_aware</option>
+                </select>
+              </label>
+              <button class="primary-button full-width" type="submit">启动训练任务</button>
+            </form>
+          </div>
+          <div class="panel command-panel">
+            <div class="section-heading compact">
+              <div>
+                <p class="eyebrow">Generated Task</p>
+                <h2>训练任务状态</h2>
+              </div>
+            </div>
+            <div class="task-state" id="taskState">
+              <span class="status-pill">waiting</span>
+              <strong>尚未创建任务</strong>
+              <p>使用 <code>python ui/server.py</code> 启动页面后，提交配置会创建本地训练进程并写入日志。</p>
+            </div>
+            <pre id="commandPreview"><code>python -u scripts/train_gnn_transfer.py \
+  --species human mouse \
+  --encoders graphsage \
+  --settings finetune \
+  --num-layers 4 \
+  --mirna-sim-edges --mrna-sim-edges</code></pre>
+          </div>
+        </section>
+
+        <section id="results" class="section">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Result Management</p>
+              <h2>实验结果管理</h2>
+            </div>
+            <div class="segmented-control" role="tablist" aria-label="结果表切换">
+              <button class="segment active" type="button" data-result-table="transfer">迁移汇总</button>
+              <button class="segment" type="button" data-result-table="edges">相似边消融</button>
+              <button class="segment" type="button" data-result-table="decoder">Decoder 消融</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead id="resultHead"></thead>
+              <tbody id="resultRows"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="visualization" class="section">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Visualization</p>
+              <h2>热力图与层数趋势</h2>
+            </div>
+            <div class="segmented-control" role="tablist" aria-label="指标切换">
+              <button class="segment active" type="button" data-heatmap-metric="aupr">AUPR</button>
+              <button class="segment" type="button" data-heatmap-metric="auc">AUC</button>
+            </div>
+          </div>
+          <div class="visual-grid">
+            <div class="panel">
+              <h3>GraphSAGE transfer 4×4 矩阵</h3>
+              <div class="heatmap" id="heatmap" aria-label="跨物种迁移热力图"></div>
+            </div>
+            <div class="panel">
+              <h3>Encoder 层数趋势</h3>
+              <div class="trend-chart" id="trendChart" aria-label="不同层数 AUPR 与 AUC 趋势"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="prediction" class="section split-section">
+          <div class="panel">
+            <div class="section-heading compact">
+              <div>
+                <p class="eyebrow">Prediction</p>
+                <h2>单样本与批量预测</h2>
+              </div>
+            </div>
+            <form class="config-form" id="predictForm">
+              <label>
+                模型
+                <select name="modelId">
+                  <option>graphsage_bothsim_l4</option>
+                  <option>gatv2_bothsim_l3</option>
+                  <option>xgb_baseline</option>
+                </select>
+              </label>
+              <label>
+                物种
+                <select name="species">
+                  <option>human</option>
+                  <option>cow</option>
+                  <option>mouse</option>
+                  <option>worm</option>
+                </select>
+              </label>
+              <label>
+                miRNA 名称
+                <input name="mirna" value="hsa-miR-1">
+              </label>
+              <label>
+                target site ID
+                <input name="target" value="target_000123">
+              </label>
+              <label class="wide-field">
+                target site 序列
+                <input name="sequence" value="UGGAAACUGAUGGCUACUGAA">
+              </label>
+              <button class="primary-button full-width" type="submit">计算相互作用概率</button>
+            </form>
+          </div>
+          <div class="panel">
+            <div class="section-heading compact">
+              <div>
+                <p class="eyebrow">Top-K Results</p>
+                <h2>预测结果</h2>
+              </div>
+            </div>
+            <div class="prediction-summary" id="predictionSummary">
+              <span>0.923</span>
+              <strong>高置信相互作用</strong>
+              <small>prediction_label = 1</small>
+            </div>
+            <div class="table-wrap compact-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>miRNA</th>
+                    <th>target site</th>
+                    <th>概率</th>
+                    <th>标签</th>
+                  </tr>
+                </thead>
+                <tbody id="predictionRows"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section id="api" class="section">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Backend Design</p>
+              <h2>后端 API 与文件存储</h2>
+            </div>
+            <p>后端负责统一读取 CSV/JSON/图片结果，调度训练脚本，并为前端返回标准化 JSON 数据。</p>
+          </div>
+          <div class="api-grid">
+            <article class="api-card">
+              <h3>数据管理接口</h3>
+              <code>GET /api/species</code>
+              <code>GET /api/datasets/summary</code>
+              <code>GET /api/graphs/summary</code>
+            </article>
+            <article class="api-card">
+              <h3>实验任务接口</h3>
+              <code>POST /api/experiments</code>
+              <code>GET /api/experiments/{id}/status</code>
+              <code>DELETE /api/experiments/{id}</code>
+            </article>
+            <article class="api-card">
+              <h3>结果查询接口</h3>
+              <code>GET /api/results/{id}/metrics</code>
+              <code>GET /api/results/transfer-matrix</code>
+              <code>GET /api/results/ablation</code>
+            </article>
+            <article class="api-card">
+              <h3>预测接口</h3>
+              <code>POST /api/predict/single</code>
+              <code>POST /api/predict/batch</code>
+              <code>GET /api/predict/{job_id}/download</code>
+            </article>
+          </div>
+          <div class="storage-flow" aria-label="系统运行流程">
+            <div>前端配置</div>
+            <div>FastAPI 接口</div>
+            <div>训练脚本</div>
+            <div>CSV / JSON / 热力图</div>
+            <div>结果展示</div>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script src="app.js"></script>
+  </body>
+</html>

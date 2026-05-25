@@ -1,0 +1,28 @@
+Aligned feature count: 490
+human train= 14144 test=  4122 features= 490
+  cow train= 29074 test=  7334 features= 490
+mouse train= 28664 test=  7558 features= 490
+ worm train=  3402 test=   934 features= 490
+Training XGBoost baseline and transfer matrices...
+[XGB] trained source model: human
+[XGB] trained source model: cow
+[XGB] trained source model: mouse
+[XGB] trained source model: worm
+[XGB] evaluated human->human
+[XGB] evaluated human->cow
+[XGB] evaluated human->mouse
+[XGB] evaluated human->worm
+[XGB] evaluated cow->human
+[XGB] evaluated cow->cow
+[XGB] evaluated cow->mouse
+[XGB] evaluated cow->worm
+[XGB] evaluated mouse->human
+[XGB] evaluated mouse->cow
+[XGB] evaluated mouse->mouse
+[XGB] evaluated mouse->worm
+[XGB] evaluated worm->human
+[XGB] evaluated worm->cow
+[XGB] evaluated worm->mouse
+[XGB] evaluated worm->worm
+Saved baseline reproduction run: /mnt/d/Projects/GProject/GraphMMI/final_exp/exp1/result/20260517-175302
+Transfer heatmaps: /mnt/d/Projects/GProject/GraphMMI/final_exp/exp1/result/20260517-175302/heatmaps

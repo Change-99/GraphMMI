@@ -1,0 +1,31 @@
+Aligned feature count: 490
+human train= 14144 test=  4122 features= 490
+  cow train= 29074 test=  7334 features= 490
+mouse train= 28664 test=  7558 features= 490
+ worm train=  3402 test=   934 features= 490
+Training ANN baseline and transfer matrices...
+2026-05-17 16:59:36.852670: I tensorflow/core/platform/cpu_feature_guard.cc:210] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2026-05-17 16:59:44.762693: E external/local_xla/xla/stream_executor/cuda/cuda_platform.cc:51] failed call to cuInit: INTERNAL: CUDA error: Failed call to cuInit: UNKNOWN ERROR (303)
+[ANN] trained source model: human
+[ANN] trained source model: cow
+[ANN] trained source model: mouse
+[ANN] trained source model: worm
+[ANN] evaluated human->human
+[ANN] evaluated human->cow
+[ANN] evaluated human->mouse
+[ANN] evaluated human->worm
+[ANN] evaluated cow->human
+[ANN] evaluated cow->cow
+[ANN] evaluated cow->mouse
+[ANN] evaluated cow->worm
+[ANN] evaluated mouse->human
+[ANN] evaluated mouse->cow
+[ANN] evaluated mouse->mouse
+[ANN] evaluated mouse->worm
+[ANN] evaluated worm->human
+[ANN] evaluated worm->cow
+[ANN] evaluated worm->mouse
+[ANN] evaluated worm->worm
+Saved baseline reproduction run: /mnt/d/Projects/GProject/GraphMMI/final_exp/exp1/result/20260517-165905
+Transfer heatmaps: /mnt/d/Projects/GProject/GraphMMI/final_exp/exp1/result/20260517-165905/heatmaps

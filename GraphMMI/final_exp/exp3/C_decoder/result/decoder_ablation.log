@@ -1,0 +1,54 @@
+[LOAD] nodes=9641 feats=98 mp_edges=89950 edge_attr_dim=40
+
+=== decoder: baseline ===
+  [baseline] e=001 loss=0.7273 val_aupr=0.6158 val_auc=0.5611 *
+  [baseline] e=002 loss=0.7063 val_aupr=0.6416 val_auc=0.6015 *
+  [baseline] e=003 loss=0.7105 val_aupr=0.7024 val_auc=0.6576 *
+  [baseline] e=004 loss=0.6990 val_aupr=0.8284 val_auc=0.8119 *
+  [baseline] e=005 loss=0.6902 val_aupr=0.8345 val_auc=0.8261 *
+  [baseline] e=008 loss=0.6830 val_aupr=0.8484 val_auc=0.8448 *
+  [baseline] e=009 loss=0.6758 val_aupr=0.8689 val_auc=0.8631 *
+  [baseline] e=010 loss=0.6693 val_aupr=0.8573 val_auc=0.8500
+[baseline] test AUC=0.8672 AUPR=0.8727
+
+=== decoder: residual ===
+  [residual] e=001 loss=0.8227 val_aupr=0.5110 val_auc=0.5248 *
+  [residual] e=002 loss=2.7141 val_aupr=0.5305 val_auc=0.5340 *
+  [residual] e=003 loss=1.4189 val_aupr=0.6408 val_auc=0.5923 *
+  [residual] e=007 loss=0.8623 val_aupr=0.7902 val_auc=0.7584 *
+  [residual] e=010 loss=0.9067 val_aupr=0.6334 val_auc=0.6322
+  [residual] e=012 loss=0.7416 val_aupr=0.8572 val_auc=0.8361 *
+  [residual] e=019 loss=0.6691 val_aupr=0.8599 val_auc=0.8426 *
+  [residual] e=020 loss=0.6582 val_aupr=0.8389 val_auc=0.8107
+  [residual] e=026 loss=0.6469 val_aupr=0.8619 val_auc=0.8488 *
+  [residual] e=028 loss=0.6407 val_aupr=0.8716 val_auc=0.8521 *
+  [residual] e=030 loss=0.6418 val_aupr=0.8553 val_auc=0.8350
+[residual] test AUC=0.8472 AUPR=0.8632
+
+=== decoder: gated ===
+  [gated] e=001 loss=0.7166 val_aupr=0.5442 val_auc=0.5531 *
+  [gated] e=002 loss=0.7210 val_aupr=0.5853 val_auc=0.5862 *
+  [gated] e=003 loss=0.7062 val_aupr=0.7222 val_auc=0.7001 *
+  [gated] e=004 loss=0.6950 val_aupr=0.8503 val_auc=0.8325 *
+  [gated] e=006 loss=0.6926 val_aupr=0.8508 val_auc=0.8427 *
+  [gated] e=007 loss=0.6892 val_aupr=0.8569 val_auc=0.8510 *
+  [gated] e=010 loss=0.6721 val_aupr=0.7941 val_auc=0.8022
+[gated] test AUC=0.8524 AUPR=0.8633
+
+=== decoder: bilinear ===
+  [bilinear] e=001 loss=0.7241 val_aupr=0.5621 val_auc=0.5702 *
+  [bilinear] e=002 loss=0.7156 val_aupr=0.6030 val_auc=0.6071 *
+  [bilinear] e=003 loss=0.7107 val_aupr=0.7910 val_auc=0.7645 *
+  [bilinear] e=008 loss=0.6866 val_aupr=0.8449 val_auc=0.8369 *
+  [bilinear] e=009 loss=0.6825 val_aupr=0.8542 val_auc=0.8479 *
+  [bilinear] e=010 loss=0.6781 val_aupr=0.8277 val_auc=0.8225
+[bilinear] test AUC=0.8461 AUPR=0.8559
+
+=== decoder: separated ===
+  [separated] e=001 loss=0.7111 val_aupr=0.7326 val_auc=0.7030 *
+  [separated] e=008 loss=0.6913 val_aupr=0.7820 val_auc=0.7582 *
+  [separated] e=009 loss=0.6913 val_aupr=0.8456 val_auc=0.8344 *
+  [separated] e=010 loss=0.6910 val_aupr=0.8369 val_auc=0.8326
+[separated] test AUC=0.8336 AUPR=0.8491
+
+Saved -> /mnt/d/Projects/GProject/GraphMMI/final_exp/exp3/C_decoder/result/20260519-114534
