@@ -1,0 +1,23 @@
+[CONFIG] pair_feature_version=v3 dim=40
+[graphsage/finetune/source/human] epoch=001 loss=0.7110 val_aupr=0.5597 val_auc=0.5615
+[graphsage/finetune/source/human] epoch=002 loss=0.7318 val_aupr=0.6168 val_auc=0.6192
+[graphsage/finetune/source/human] epoch=003 loss=0.7052 val_aupr=0.8351 val_auc=0.8128
+[graphsage/finetune/source/human] epoch=007 loss=0.6875 val_aupr=0.8551 val_auc=0.8439
+[graphsage/finetune/source/mouse] epoch=001 loss=0.7041 val_aupr=0.5671 val_auc=0.5398
+[graphsage/finetune/source/mouse] epoch=002 loss=0.7254 val_aupr=0.6213 val_auc=0.5793
+Traceback (most recent call last):
+  File "/mnt/d/Projects/GProject/GraphMMI/scripts/train_gnn_transfer.py", line 1099, in <module>
+    main()
+  File "/mnt/d/Projects/GProject/GraphMMI/scripts/train_gnn_transfer.py", line 1090, in main
+    rows = run_experiments(args, run_dir)
+  File "/mnt/d/Projects/GProject/GraphMMI/scripts/train_gnn_transfer.py", line 960, in run_experiments
+    train_result = train_on_graph(
+  File "/mnt/d/Projects/GProject/GraphMMI/scripts/train_gnn_transfer.py", line 719, in train_on_graph
+    loss.backward()
+  File "/home/gky/miniconda3/envs/mti39/lib/python3.9/site-packages/torch/_tensor.py", line 647, in backward
+    torch.autograd.backward(
+  File "/home/gky/miniconda3/envs/mti39/lib/python3.9/site-packages/torch/autograd/__init__.py", line 354, in backward
+    _engine_run_backward(
+  File "/home/gky/miniconda3/envs/mti39/lib/python3.9/site-packages/torch/autograd/graph.py", line 829, in _engine_run_backward
+    return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+KeyboardInterrupt

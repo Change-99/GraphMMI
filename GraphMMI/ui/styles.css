@@ -36,6 +36,10 @@ html {
   scroll-behavior: smooth;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   min-width: 320px;
@@ -188,6 +192,22 @@ button {
   display: grid;
   gap: 24px;
   padding: 24px clamp(18px, 3vw, 40px) 56px;
+  align-content: start;
+}
+
+.page-section {
+  animation: pageIn 280ms var(--ease);
+}
+
+@keyframes pageIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .topbar {
@@ -319,6 +339,236 @@ button {
   line-height: 1;
 }
 
+.overview-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.overview-panel {
+  padding: 20px;
+  border-radius: var(--radius-lg);
+}
+
+.wide-overview-panel {
+  grid-column: 1 / -1;
+}
+
+.module-list,
+.best-list,
+.artifact-list {
+  display: grid;
+  gap: 10px;
+}
+
+.module-item,
+.best-item,
+.artifact-item {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--outline-soft);
+  border-radius: 16px;
+  background: var(--surface-low);
+  color: var(--text);
+  text-align: left;
+}
+
+.module-item {
+  grid-template-columns: 84px 1fr;
+  cursor: pointer;
+}
+
+.module-item span {
+  grid-row: span 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: max-content;
+  min-width: 64px;
+  min-height: 30px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary-strong);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.module-item strong,
+.best-item strong,
+.artifact-item strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.module-item small,
+.best-item small,
+.artifact-item small,
+.artifact-item span {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.82rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.best-item strong {
+  color: var(--primary-strong);
+  font-size: 1.55rem;
+}
+
+.dataset-card-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.dataset-card {
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+  border-radius: 18px;
+  background: var(--surface);
+}
+
+.dataset-card span,
+.dataset-card small {
+  color: var(--muted);
+}
+
+.dataset-card strong {
+  color: var(--primary-strong);
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.dataset-toolbar {
+  display: grid;
+  grid-template-columns: minmax(240px, 360px) auto;
+  gap: 12px;
+  align-items: end;
+  margin-bottom: 16px;
+}
+
+.dataset-toolbar label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.dataset-toolbar select {
+  min-height: 48px;
+  border: 0;
+  border-bottom: 2px solid var(--outline);
+  border-radius: 12px 12px 0 0;
+  background: var(--surface-low);
+  color: var(--text);
+  padding: 0 14px;
+}
+
+.dataset-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.dataset-detail {
+  padding: 18px;
+  border-radius: 18px;
+  background: var(--surface);
+}
+
+.detail-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.detail-list div,
+.file-item {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--surface-low);
+}
+
+.detail-list span,
+.file-item small {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.detail-list strong,
+.file-item strong {
+  overflow: hidden;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.split-bars {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.split-row {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 78px;
+  gap: 10px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.split-track {
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-low);
+}
+
+.split-track i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--primary);
+}
+
+.file-list {
+  display: grid;
+  gap: 10px;
+}
+
+.file-ok,
+.file-missing {
+  width: max-content;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.file-ok {
+  background: #d4efd7;
+  color: #245b2a;
+}
+
+.file-missing {
+  background: #ffe1df;
+  color: #8a241e;
+}
+
 .section-heading {
   display: flex;
   align-items: end;
@@ -372,6 +622,38 @@ td strong {
   color: var(--primary-strong);
 }
 
+.result-source {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.result-controls {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+  margin: 0 0 16px;
+}
+
+.result-controls label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.result-controls select {
+  min-height: 48px;
+  border: 0;
+  border-bottom: 2px solid var(--outline);
+  border-radius: 12px 12px 0 0;
+  background: var(--surface-low);
+  color: var(--text);
+  padding: 0 14px;
+}
+
 .tag,
 .status-pill {
   display: inline-flex;
@@ -411,7 +693,8 @@ td strong {
 }
 
 .config-form input,
-.config-form select {
+.config-form select,
+.config-form textarea {
   width: 100%;
   min-height: 54px;
   border: 0;
@@ -424,8 +707,16 @@ td strong {
   transition: border-color 200ms var(--ease), background 200ms var(--ease);
 }
 
+.config-form textarea {
+  min-height: 118px;
+  padding-top: 14px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
 .config-form input:focus,
-.config-form select:focus {
+.config-form select:focus,
+.config-form textarea:focus {
   border-color: var(--primary);
   background: #eee6f3;
 }
@@ -523,6 +814,35 @@ pre {
   color: #eaddff;
   font-size: 0.88rem;
   line-height: 1.6;
+}
+
+.log-panel {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.log-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.log-header strong {
+  color: var(--text);
+}
+
+.log-output {
+  max-height: 340px;
+  min-height: 180px;
+  overflow: auto;
+  border-radius: 18px;
+  background: #15131a;
+  color: #d9d3e2;
+  white-space: pre-wrap;
 }
 
 .visual-grid {
@@ -706,6 +1026,8 @@ pre {
   .hero-workspace,
   .visual-grid,
   .split-section,
+  .overview-grid,
+  .dataset-detail-grid,
   .api-grid {
     grid-template-columns: 1fr;
   }
@@ -724,6 +1046,9 @@ pre {
 
   .nav-list,
   .metric-grid,
+  .dataset-card-grid,
+  .dataset-toolbar,
+  .detail-list,
   .config-form,
   .storage-flow {
     grid-template-columns: 1fr;

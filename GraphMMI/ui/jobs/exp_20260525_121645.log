@@ -1,0 +1,5 @@
+[CONFIG] pair_feature_version=v3 dim=40
+[graphsage/finetune/source/human] epoch=001 loss=0.7110 val_aupr=0.5597 val_auc=0.5615
+[graphsage/finetune/source/human] epoch=002 loss=0.7318 val_aupr=0.6168 val_auc=0.6192
+[graphsage/finetune/source/human] epoch=003 loss=0.7052 val_aupr=0.8351 val_auc=0.8128
+[graphsage/finetune/source/human] epoch=007 loss=0.6875 val_aupr=0.8550 val_auc=0.8439

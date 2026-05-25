@@ -18,13 +18,13 @@
           </div>
         </div>
         <nav class="nav-list">
-          <a href="#overview" class="nav-link active">系统总览</a>
-          <a href="#datasets" class="nav-link">数据管理</a>
-          <a href="#training" class="nav-link">模型训练</a>
-          <a href="#results" class="nav-link">实验结果</a>
-          <a href="#visualization" class="nav-link">热力图与趋势</a>
-          <a href="#prediction" class="nav-link">相互作用预测</a>
-          <a href="#api" class="nav-link">接口与存储</a>
+          <a href="#overview" class="nav-link active" data-page-link="overview">系统总览</a>
+          <a href="#datasets" class="nav-link" data-page-link="datasets">数据管理</a>
+          <a href="#training" class="nav-link" data-page-link="training">模型训练</a>
+          <a href="#results" class="nav-link" data-page-link="results">实验结果</a>
+          <a href="#visualization" class="nav-link" data-page-link="visualization">热力图与趋势</a>
+          <a href="#prediction" class="nav-link" data-page-link="prediction">相互作用预测</a>
+          <a href="#api" class="nav-link" data-page-link="api">接口与存储</a>
         </nav>
         <div class="status-panel">
           <span class="status-dot"></span>
@@ -47,7 +47,7 @@
           </div>
         </header>
 
-        <section id="overview" class="section hero-workspace">
+        <section id="overview" class="section hero-workspace page-section" data-page="overview">
           <div class="hero-copy">
             <p class="eyebrow">需求定位</p>
             <h2>统一组织数据处理、模型训练、结果保存与可视化展示</h2>
@@ -84,30 +84,45 @@
           </div>
         </section>
 
-        <section class="metric-grid" aria-label="系统关键指标">
-          <article class="metric-card">
-            <span>数据物种数</span>
-            <strong>4</strong>
-            <small>human / cow / mouse / worm</small>
+        <section class="metric-grid page-section" data-page="overview" id="overviewCards" aria-label="系统关键指标">
+          <article class="metric-card"><span>数据物种数</span><strong>4</strong><small>human / cow / mouse / worm</small></article>
+          <article class="metric-card"><span>图模型数量</span><strong>2</strong><small>GraphSAGE 与 GATv2</small></article>
+          <article class="metric-card"><span>最高 AUPR</span><strong>0.8727</strong><small>decoder baseline, human</small></article>
+          <article class="metric-card"><span>最佳跨物种 AUPR</span><strong>0.8653</strong><small>both-sim edge ablation</small></article>
+        </section>
+
+        <section class="overview-grid page-section" data-page="overview" aria-label="系统运行概览">
+          <article class="overview-panel">
+            <div class="section-heading compact">
+              <div>
+                <p class="eyebrow">Module Status</p>
+                <h3>功能模块状态</h3>
+              </div>
+            </div>
+            <div class="module-list" id="overviewModules"></div>
           </article>
-          <article class="metric-card">
-            <span>图模型数量</span>
-            <strong>2</strong>
-            <small>GraphSAGE 与 GATv2</small>
+          <article class="overview-panel">
+            <div class="section-heading compact">
+              <div>
+                <p class="eyebrow">Best Metrics</p>
+                <h3>当前代表性结果</h3>
+              </div>
+            </div>
+            <div class="best-list" id="overviewBest"></div>
           </article>
-          <article class="metric-card">
-            <span>最高 AUPR</span>
-            <strong>0.8727</strong>
-            <small>decoder baseline, human</small>
-          </article>
-          <article class="metric-card">
-            <span>最佳跨物种 AUPR</span>
-            <strong>0.8653</strong>
-            <small>both-sim edge ablation</small>
+          <article class="overview-panel wide-overview-panel">
+            <div class="section-heading compact">
+              <div>
+                <p class="eyebrow">Recent Artifacts</p>
+                <h3>最近结果文件</h3>
+              </div>
+            </div>
+            <div class="artifact-list" id="overviewRecent"></div>
+            <p class="result-source" id="overviewSource">数据来源：内置演示数据</p>
           </article>
         </section>
 
-        <section id="datasets" class="section">
+        <section id="datasets" class="section page-section" data-page="datasets" hidden>
           <div class="section-heading">
             <div>
               <p class="eyebrow">Data Management</p>
@@ -115,24 +130,63 @@
             </div>
             <p>展示样本、节点、target site、图输入文件和预处理状态，支撑论文中的数据管理需求。</p>
           </div>
+          <div class="dataset-card-grid" id="datasetCards" aria-label="数据总览"></div>
+          <div class="dataset-toolbar">
+            <label>
+              查看物种
+              <select id="datasetSpeciesSelect">
+                <option value="all">全部物种</option>
+                <option value="human">human</option>
+                <option value="cow">cow</option>
+                <option value="mouse">mouse</option>
+                <option value="worm">worm</option>
+              </select>
+            </label>
+            <button class="secondary-button" type="button" id="refreshDatasets">刷新数据</button>
+          </div>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
                   <th>物种</th>
-                  <th>样本规模</th>
+                  <th>正样本</th>
+                  <th>总节点</th>
                   <th>miRNA 节点</th>
                   <th>target site 节点</th>
-                  <th>相互作用边</th>
+                  <th>miRNA 相似边</th>
+                  <th>target 相似边</th>
+                  <th>特征维度</th>
                   <th>图数据状态</th>
                 </tr>
               </thead>
               <tbody id="datasetRows"></tbody>
             </table>
           </div>
+          <div class="dataset-detail-grid">
+            <article class="dataset-detail">
+              <div class="section-heading compact">
+                <div>
+                  <p class="eyebrow">Selected Dataset</p>
+                  <h3 id="datasetDetailTitle">human 数据详情</h3>
+                </div>
+              </div>
+              <div class="detail-list" id="datasetDetailList"></div>
+              <div class="split-bars" id="datasetSplitBars" aria-label="训练验证测试划分"></div>
+            </article>
+            <article class="dataset-detail">
+              <div class="section-heading compact">
+                <div>
+                  <p class="eyebrow">Files</p>
+                  <h3>图输入文件状态</h3>
+                </div>
+              </div>
+              <div class="file-list" id="datasetFileList"></div>
+            </article>
+          </div>
+          <p class="result-source" id="datasetSource">数据来源：内置演示数据</p>
         </section>
 
-        <section id="training" class="section split-section">
+        <section id="training" class="section split-section page-section" data-page="training" hidden>
           <div class="panel">
             <div class="section-heading compact">
               <div>
@@ -227,10 +281,17 @@
   --settings finetune \
   --num-layers 4 \
   --mirna-sim-edges --mrna-sim-edges</code></pre>
+            <div class="log-panel">
+              <div class="log-header">
+                <strong>运行输出</strong>
+                <span id="logHint">等待任务启动</span>
+              </div>
+              <pre class="log-output" id="logOutput"><code>任务启动后，这里会显示训练脚本 stdout/stderr。</code></pre>
+            </div>
           </div>
         </section>
 
-        <section id="results" class="section">
+        <section id="results" class="section page-section" data-page="results" hidden>
           <div class="section-heading">
             <div>
               <p class="eyebrow">Result Management</p>
@@ -240,7 +301,15 @@
               <button class="segment active" type="button" data-result-table="transfer">迁移汇总</button>
               <button class="segment" type="button" data-result-table="edges">相似边消融</button>
               <button class="segment" type="button" data-result-table="decoder">Decoder 消融</button>
+              <button class="segment" type="button" data-result-table="runs">Runs 数据</button>
             </div>
+          </div>
+          <div class="result-controls" id="runResultControls" hidden>
+            <label>
+              选择 runs 结果文件
+              <select id="runResultSelect"></select>
+            </label>
+            <button class="secondary-button" type="button" id="refreshRunResults">刷新列表</button>
           </div>
           <div class="table-wrap">
             <table>
@@ -248,9 +317,10 @@
               <tbody id="resultRows"></tbody>
             </table>
           </div>
+          <p class="result-source" id="resultSource">数据来源：内置演示数据</p>
         </section>
 
-        <section id="visualization" class="section">
+        <section id="visualization" class="section page-section" data-page="visualization" hidden>
           <div class="section-heading">
             <div>
               <p class="eyebrow">Visualization</p>
@@ -261,10 +331,26 @@
               <button class="segment" type="button" data-heatmap-metric="auc">AUC</button>
             </div>
           </div>
+          <div class="result-controls heatmap-controls">
+            <label>
+              选择热力图结果文件
+              <select id="heatmapFileSelect"></select>
+            </label>
+            <label>
+              encoder
+              <select id="heatmapEncoderSelect"></select>
+            </label>
+            <label>
+              setting
+              <select id="heatmapSettingSelect"></select>
+            </label>
+            <button class="secondary-button" type="button" id="refreshHeatmaps">刷新列表</button>
+          </div>
           <div class="visual-grid">
             <div class="panel">
-              <h3>GraphSAGE transfer 4×4 矩阵</h3>
+              <h3 id="heatmapTitle">GraphSAGE transfer 4×4 矩阵</h3>
               <div class="heatmap" id="heatmap" aria-label="跨物种迁移热力图"></div>
+              <p class="result-source" id="heatmapSource">数据来源：内置演示数据</p>
             </div>
             <div class="panel">
               <h3>Encoder 层数趋势</h3>
@@ -273,7 +359,7 @@
           </div>
         </section>
 
-        <section id="prediction" class="section split-section">
+        <section id="prediction" class="section split-section page-section" data-page="prediction" hidden>
           <div class="panel">
             <div class="section-heading compact">
               <div>
@@ -284,7 +370,7 @@
             <form class="config-form" id="predictForm">
               <label>
                 模型
-                <select name="modelId">
+                <select name="modelId" id="predictModelSelect">
                   <option>graphsage_bothsim_l4</option>
                   <option>gatv2_bothsim_l3</option>
                   <option>xgb_baseline</option>
@@ -292,7 +378,7 @@
               </label>
               <label>
                 物种
-                <select name="species">
+                <select name="species" id="predictSpeciesSelect">
                   <option>human</option>
                   <option>cow</option>
                   <option>mouse</option>
@@ -301,17 +387,25 @@
               </label>
               <label>
                 miRNA 名称
-                <input name="mirna" value="hsa-miR-1">
+                <input name="mirna" id="mirnaInput" value="hsa-miR-1" list="mirnaOptions">
+                <datalist id="mirnaOptions"></datalist>
               </label>
               <label>
                 target site ID
-                <input name="target" value="target_000123">
+                <input name="target" id="targetInput" value="target_000123" list="targetOptions">
+                <datalist id="targetOptions"></datalist>
               </label>
               <label class="wide-field">
                 target site 序列
-                <input name="sequence" value="UGGAAACUGAUGGCUACUGAA">
+                <input name="sequence" id="targetSequenceInput" value="UGGAAACUGAUGGCUACUGAA">
               </label>
-              <button class="primary-button full-width" type="submit">计算相互作用概率</button>
+              <label class="wide-field">
+                批量候选 pair
+                <textarea name="batchPairs" rows="5">hsa-miR-1,target_000123,UGGAAACUGAUGGCUACUGAA
+hsa-miR-21,target_000298,AUGGCUACUGAAUGGAAACU</textarea>
+              </label>
+              <button class="primary-button full-width" type="submit">计算单样本概率</button>
+              <button class="secondary-button full-width" type="button" id="batchPredictButton">批量预测并排序</button>
             </form>
           </div>
           <div class="panel">
@@ -326,6 +420,7 @@
               <strong>高置信相互作用</strong>
               <small>prediction_label = 1</small>
             </div>
+            <p class="result-source" id="predictionSource">数据来源：前端演示数据</p>
             <div class="table-wrap compact-table">
               <table>
                 <thead>
@@ -342,7 +437,7 @@
           </div>
         </section>
 
-        <section id="api" class="section">
+        <section id="api" class="section page-section" data-page="api" hidden>
           <div class="section-heading">
             <div>
               <p class="eyebrow">Backend Design</p>
@@ -353,8 +448,10 @@
           <div class="api-grid">
             <article class="api-card">
               <h3>数据管理接口</h3>
+              <code>GET /api/overview/summary</code>
               <code>GET /api/species</code>
               <code>GET /api/datasets/summary</code>
+              <code>GET /api/predict/options?species=human</code>
               <code>GET /api/graphs/summary</code>
             </article>
             <article class="api-card">
@@ -368,11 +465,16 @@
               <code>GET /api/results/{id}/metrics</code>
               <code>GET /api/results/transfer-matrix</code>
               <code>GET /api/results/ablation</code>
+              <code>GET /api/results/runs</code>
+              <code>GET /api/visualization/heatmaps</code>
             </article>
             <article class="api-card">
               <h3>预测接口</h3>
+              <code>GET /api/predict/models</code>
+              <code>GET /api/predict/options?species=human</code>
               <code>POST /api/predict/single</code>
               <code>POST /api/predict/batch</code>
+              <code>GET /api/predict/history</code>
               <code>GET /api/predict/{job_id}/download</code>
             </article>
           </div>
