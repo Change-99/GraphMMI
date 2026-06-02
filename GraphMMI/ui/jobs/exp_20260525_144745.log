@@ -1,0 +1,38 @@
+[CONFIG] pair_feature_version=v3 dim=40
+[gatv2/finetune/source/human] epoch=001 loss=0.7114 val_aupr=0.5521 val_auc=0.5251
+[gatv2/finetune/source/human] epoch=002 loss=0.7705 val_aupr=0.6540 val_auc=0.6174
+[gatv2/finetune/source/human] epoch=005 loss=0.7231 val_aupr=0.6576 val_auc=0.6513
+[gatv2/finetune/source/human] epoch=006 loss=0.7053 val_aupr=0.7488 val_auc=0.7336
+[gatv2/finetune/source/human] epoch=007 loss=0.6903 val_aupr=0.8438 val_auc=0.8283
+[gatv2/finetune/source/human] epoch=011 loss=0.6908 val_aupr=0.8452 val_auc=0.8295
+[gatv2/finetune/source/human] epoch=012 loss=0.6816 val_aupr=0.8585 val_auc=0.8469
+[gatv2/finetune/source/human] epoch=017 loss=0.6659 val_aupr=0.8630 val_auc=0.8517
+[gatv2/finetune/source/human] epoch=018 loss=0.6625 val_aupr=0.8659 val_auc=0.8574
+[gatv2/finetune/source/mouse] epoch=001 loss=0.7133 val_aupr=0.5093 val_auc=0.5146
+[gatv2/finetune/source/mouse] epoch=002 loss=0.7517 val_aupr=0.5894 val_auc=0.5854
+[gatv2/finetune/source/mouse] epoch=003 loss=0.7084 val_aupr=0.6256 val_auc=0.6308
+[gatv2/finetune/source/mouse] epoch=005 loss=0.7135 val_aupr=0.6515 val_auc=0.6572
+[gatv2/finetune/source/mouse] epoch=006 loss=0.7043 val_aupr=0.7294 val_auc=0.7232
+[gatv2/finetune/source/mouse] epoch=007 loss=0.6925 val_aupr=0.7900 val_auc=0.7561
+[gatv2/finetune/source/mouse] epoch=013 loss=0.6724 val_aupr=0.7994 val_auc=0.7712
+[gatv2/finetune/source/mouse] epoch=014 loss=0.6687 val_aupr=0.8158 val_auc=0.7922
+[gatv2/finetune/source/mouse] epoch=015 loss=0.6673 val_aupr=0.8257 val_auc=0.8069
+[gatv2/finetune/source/mouse] epoch=016 loss=0.6625 val_aupr=0.8336 val_auc=0.8190
+[gatv2/finetune/source/mouse] epoch=017 loss=0.6550 val_aupr=0.8393 val_auc=0.8275
+[gatv2/finetune/source/mouse] epoch=018 loss=0.6444 val_aupr=0.8411 val_auc=0.8316
+[gatv2/finetune/source/mouse] epoch=019 loss=0.6333 val_aupr=0.8427 val_auc=0.8359
+[gatv2/finetune/source/mouse] epoch=020 loss=0.6266 val_aupr=0.8453 val_auc=0.8411
+[gatv2/finetune/finetune/human->human] epoch=001 loss=0.6538 val_aupr=0.8511 val_auc=0.8389
+[gatv2/finetune/finetune/human->human] epoch=003 loss=0.6360 val_aupr=0.8524 val_auc=0.8408
+[RESULT] gatv2/finetune human->human AUC=0.8397 AUPR=0.8540 F1=0.7489 MCC=0.5372 thr=0.5056
+[gatv2/finetune/finetune/human->mouse] epoch=001 loss=0.6597 val_aupr=0.8231 val_auc=0.8043
+[gatv2/finetune/finetune/human->mouse] epoch=002 loss=0.6517 val_aupr=0.8234 val_auc=0.8052
+[gatv2/finetune/finetune/human->mouse] epoch=003 loss=0.6445 val_aupr=0.8283 val_auc=0.8105
+[gatv2/finetune/finetune/human->mouse] epoch=004 loss=0.6340 val_aupr=0.8322 val_auc=0.8151
+[gatv2/finetune/finetune/human->mouse] epoch=005 loss=0.6258 val_aupr=0.8331 val_auc=0.8170
+[RESULT] gatv2/finetune human->mouse AUC=0.8272 AUPR=0.8400 F1=0.6994 MCC=0.5038 thr=0.4969
+[gatv2/finetune/finetune/mouse->human] epoch=001 loss=0.6136 val_aupr=0.8512 val_auc=0.8504
+[RESULT] gatv2/finetune mouse->human AUC=0.8482 AUPR=0.8569 F1=0.7446 MCC=0.5541 thr=0.5719
+[gatv2/finetune/finetune/mouse->mouse] epoch=001 loss=0.6060 val_aupr=0.8447 val_auc=0.8436
+[RESULT] gatv2/finetune mouse->mouse AUC=0.8464 AUPR=0.8491 F1=0.7280 MCC=0.5262 thr=0.5811
+Saved GNN transfer run to: /mnt/d/Projects/GProject/GraphMMI/runs/ui_experiments/20260525-144756
