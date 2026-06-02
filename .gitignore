@@ -1,5 +1,8 @@
 
 
+# Log files
+*.log
+
 # Ignore all data folders
 data/
 **/data/
@@ -26,3 +29,9 @@ env/
 
 # VSCode
 .vscode/
+
+CLAUDE.md
+run.ipynb
+/GraphMMI/AGENTS.md
+
+*.log

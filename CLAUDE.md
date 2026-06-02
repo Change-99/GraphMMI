@@ -30,13 +30,7 @@ python scripts/train_gnn_transfer.py
 
 ### Baselines
 
-```bash
-# Data check only (no TF/XGBoost needed)
-python scripts/baseline_ann_xgb_transfer.py --check-data
 
-# Full baseline reproduction
-python scripts/baseline_ann_xgb_transfer.py --models ann xgb --transfer-size 500
-```
 
 ### gnn/ experiments
 
